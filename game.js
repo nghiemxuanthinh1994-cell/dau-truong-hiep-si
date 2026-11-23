@@ -418,6 +418,36 @@ const elemOf = (f) => { if (f.mon) return f.mon.e; const sb = setBonus(f.gear); 
 /* Vẽ nhân vật bằng ảnh 3D (có hào quang phát sáng). Không có ảnh thì quay về hình vẽ khối.
    pose: {arm (pha vung đòn), dead 0..1, walk, flash 0..1, t (giây)} */
 // Vẽ nhân vật ghép theo khuôn: giày -> áo giáp -> găng -> giáp vai -> mũ, rồi khiên + vũ khí ở điểm tay cố định
+// ===== Độ nét & chuyển động mềm =====
+const DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+// Đặt khung vẽ theo mật độ điểm ảnh của máy (vẽ toạ độ logic, hiển thị sắc nét)
+function hd(c, w, h) {
+  const W = Math.round(w * DPR), H = Math.round(h * DPR);
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, 0, 0); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  return x;
+}
+const SCR = {};
+function scratch(key, w, h) {
+  const W = Math.ceil(w * DPR) + 8, H = Math.ceil(h * DPR) + 8;
+  let c = SCR[key]; if (!c) c = SCR[key] = document.createElement('canvas');
+  if (c.width < W || c.height < H) { c.width = Math.max(c.width, W); c.height = Math.max(c.height, H); }
+  const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  x.clearRect(0, 0, W, H); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  return [c, x, W, H];
+}
+// Uốn thân theo dải ngang: đầu-vai đung đưa, chân đứng yên (giống có khớp xương)
+function warpInto(x, img, W, H, t, amp, phase) {
+  const N = 20, iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, w = W - 8, h = H - 8;
+  for (let i = 0; i < N; i++) {
+    const v = i / N, k = 1 - v, off = Math.sin(t * 1.7 + phase + v * 1.8) * amp * DPR * k * k;
+    x.drawImage(img, 0, ih * v, iw, ih / N + 1, 4 + off, 4 + h * v, w, h / N + 1.2);
+  }
+}
+function flashScratch(x, W, H, a) {
+  if (a <= 0) return; x.globalCompositeOperation = 'source-atop'; x.globalAlpha = a; x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+}
 function drawPaper(ctx, x, y, sc, L, facing, pose) {
   pose = pose || {};
   const t = pose.t != null ? pose.t : performance.now() / 1000, dead = pose.dead || 0;
@@ -442,12 +472,12 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
   ctx.scale(1 + (breathe - 1) * -0.5, breathe); ctx.globalAlpha = 1 - dead * 0.35;
   const ox = -Wc * (LOPM.cx || 0.5), oy = -Hc * LOPM.feet; // khung ảnh: tâm thân và chân trùng gốc toạ độ
   const P = L.paper;
-  for (const v of ['giay', 'giap', 'gang', 'vai', 'dau']) {
-    const id = lopId(v, P[v]); if (!id) continue;
-    const it = P[v]; if (it && it.rar >= 3) { ctx.shadowColor = RCOL[it.rar]; ctx.shadowBlur = 4 + it.rar * 2; }
-    ctx.drawImage(SPR[id], ox, oy, Wc, Hc); ctx.shadowBlur = 0;
-    if (pose.flash > 0 && SPR_WHITE[id]) { ctx.globalAlpha = pose.flash * 0.7; ctx.drawImage(SPR_WHITE[id], ox, oy, Wc, Hc); ctx.globalAlpha = 1 - dead * 0.35; }
-  }
+  const [pc, px, PW, PH] = scratch('paper' + (pose.key || ''), Wc, Hc);
+  const amp = (pose.still ? 0 : 2.4) * sc;
+  for (const v of ['giay', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) warpInto(px, SPR[id], PW, PH, t, amp, x * 0.03); }
+  flashScratch(px, PW, PH, (pose.flash || 0) * 0.7);
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = (6 + (L.tier || 0) * 2.5) * (0.8 + Math.sin(t * 3) * 0.2); }
+  ctx.drawImage(pc, 0, 0, PW, PH, ox - 4 / DPR, oy - 4 / DPR, PW / DPR, PH / DPR); ctx.shadowBlur = 0;
   const hx = ox + Wc * LOPM.hand[0], hy = oy + Hc * LOPM.hand[1], sx = ox + Wc * LOPM.off[0], sy = oy + Hc * LOPM.off[1];
   if (L.sh && ready(L.sh)) { const si = SPR[L.sh], shh = H * 0.32, sw = shh * si.naturalWidth / si.naturalHeight;
     if (L.sR >= 3) { ctx.shadowColor = RCOL[L.sR]; ctx.shadowBlur = 8 + L.sR * 2; }
@@ -515,10 +545,12 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   ctx.scale(1 + (breathe - 1) * -0.5, breathe);
   ctx.globalAlpha = 1 - dead * 0.35;
   if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = (L.boss ? 26 : 10 + (L.tier || 2) * 5) * (0.8 + Math.sin(t * 3) * 0.2); }
-  ctx.drawImage(im, -W / 2, -H, W, H);
-  ctx.shadowBlur = 0;
   const wid = useLayer ? bodyId : L.spr;
-  if (pose.flash > 0 && SPR_WHITE[wid]) { ctx.globalAlpha = pose.flash * 0.75; ctx.drawImage(SPR_WHITE[wid], -W / 2, -H, W, H); ctx.globalAlpha = 1 - dead * 0.35; }
+  const [fc, fx, FW, FH] = scratch('f' + (pose.key || '') + wid, W, H);
+  warpInto(fx, im, FW, FH, t, (pose.still ? 0 : (L.boss ? 2.8 : 2.2)) * sc, x * 0.03);
+  flashScratch(fx, FW, FH, (pose.flash || 0) * 0.75);
+  ctx.drawImage(fc, 0, 0, FW, FH, -W / 2 - 4 / DPR, -H - 4 / DPR, FW / DPR, FH / DPR);
+  ctx.shadowBlur = 0;
   const A = anchorOf(bodyId);
   const ov = (id, R2, cx, cy, w, alignBottom) => {
     if (!id || !ready(id)) return; const oi = SPR[id], h2 = w * oi.naturalHeight / oi.naturalWidth;
@@ -707,14 +739,14 @@ function renderHome() {
 let homeAnimT = 0;
 function homeLoop(ts) {
   if (curTab === 'home' && $('battle').classList.contains('hidden')) {
-    const c = $('heroCanvas'), ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
+    const c = $('heroCanvas'), ctx = hd(c, 360, 330);
+    ctx.clearRect(0, 0, 360, 330);
     // bệ đá
     const g = ctx.createRadialGradient(180, 300, 10, 180, 300, 150); g.addColorStop(0, 'rgba(255,200,90,.35)'); g.addColorStop(1, 'rgba(255,200,90,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 360, 330);
     ctx.fillStyle = '#3a2d62'; ctx.beginPath(); ctx.ellipse(180, 305, 110, 20, 0, 0, Math.PI * 2); ctx.fill();
     const t = ts / 1000;
-    drawFighter(ctx, 180, 305, 1.6, lookFromGear(S.gear, S.banner, false, S.outfit), 1, { maxW: 320, t, arm: 0.6 + Math.max(0, Math.sin(t * 0.9)) ** 8 * 0.7 });
+    drawFighter(ctx, 180, 305, 1.6, lookFromGear(S.gear, S.banner, false, S.outfit), 1, { key: 'home', maxW: 320, t, arm: 0.6 + Math.max(0, Math.sin(t * 0.9)) ** 8 * 0.7 });
   }
   requestAnimationFrame(homeLoop);
 }
@@ -740,8 +772,8 @@ function renderGear() {
     return slotHTML(it, s).replace('</div>', better ? '<span style="position:absolute;top:0;right:3px;color:#5dff8a;font-size:14px">▲</span></div>' : '</div>');
   }).join('') : '<p class="hint" style="grid-column:1/6">Túi trống. Thắng trận để nhận rương!</p>';
   document.querySelectorAll('#bag .slot').forEach(el => el.onclick = () => { const it = S.bag.find(x => x.id === el.dataset.id); if (it) compareItem(it); });
-  const c = $('gearCanvas'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, 200, 260);
-  drawFighter(ctx, 100, 250, 1.4, lookFromGear(S.gear, S.banner, false, S.outfit), 1, { maxW: 196 });
+  const c = $('gearCanvas'), ctx = hd(c, 200, 260); ctx.clearRect(0, 0, 200, 260);
+  drawFighter(ctx, 100, 250, 1.4, lookFromGear(S.gear, S.banner, false, S.outfit), 1, { key: 'gear', maxW: 196, still: true });
 }
 function isBetter(it) { const cur = S.gear[it.slot]; if (!cur) return true; return mainStat(it).v > mainStat(cur).v; }
 function cardHTML(it, tag) {
@@ -906,7 +938,7 @@ function vsScreen(op, opts) {
   <div class="btns"><button class="btn" id="bBack">Quay lại</button>
   ${opts.reroll ? `<button class="btn" id="bReroll">🔄 Đổi (💎5)</button>` : ''}
   <button class="btn ok" id="bFight">CHIẾN!</button></div>`, root => {
-    const draw = (id, f, face) => { const c = root.querySelector(id), x = c.getContext('2d'); drawFighter(x, 55, 126, 0.66, lookOf(f), face, { maxW: 104 }); };
+    const draw = (id, f, face) => { const c = root.querySelector(id), x = hd(c, 110, 130); drawFighter(x, 55, 126, 0.66, lookOf(f), face, { key: id, maxW: 104, still: true }); };
     draw('#vsA', me, 1); draw('#vsB', op, -1);
     bindBtns(root, {
       '#bBack': closeModal,
@@ -938,13 +970,14 @@ function mkFighter(f, side, hpStart) {
 let BH = 640;
 function fitBattle() {
   const el = $('app'); const w = el.clientWidth || 360, h = el.clientHeight || 640;
-  BH = clamp(Math.round(360 * h / w), 560, 900); if (BC.height !== BH) BC.height = BH;
+  BH = clamp(Math.round(360 * h / w), 560, 900); hd(BC, 360, BH);
 }
 window.addEventListener('resize', () => { if (B) fitBattle(); });
 function startBattle(me, op, onEnd, arena, hpA) {
   const A = mkFighter(me, -1, hpA), O = mkFighter(op, 1);
   A.shownHp = A.hp; O.shownHp = O.hp;
-  B = { A, O, t: 0, phase: 'intro', fx: [], texts: [], q: null, over: false, onEnd, arena: ARENAS[arena != null ? arena : rint(0, 3)], last: 0, skip: false, banner: null, shake: 0, log: [] };
+  const zone = (typeof ZONES !== 'undefined') ? (op.mon ? ZONE_OF_ELEM[op.mon.e] : (typeof arena === 'string' ? arena : ZONE_LIST[arena != null ? arena % ZONE_LIST.length : rint(0, ZONE_LIST.length - 1)])) : null;
+  B = { zone, zst: {}, A, O, t: 0, phase: 'intro', fx: [], texts: [], q: null, over: false, onEnd, arena: ARENAS[arena != null ? arena : rint(0, 3)], last: 0, skip: false, banner: null, shake: 0, log: [] };
   $('battle').classList.remove('hidden');
   fitBattle();
   B.last = performance.now();
@@ -972,6 +1005,10 @@ function update(dt) {
   B.t += dt;
   for (const f of [A, O]) { f.flash = Math.max(0, f.flash - dt / 200); f.shownHp += (f.hp - f.shownHp) * Math.min(1, dt / 150); }
   B.shake = Math.max(0, B.shake - dt / 30);
+  // khựng hình khi trúng đòn (hit-stop) và zoom ống kính hồi về
+  if (B.hitstop > 0) { B.hitstop -= dt; dt *= 0.06; }
+  B.zoom = 1 + ((B.zoom || 1) - 1) * Math.pow(0.002, dt / 1000);
+  for (const f of [A, O]) f.kb = (f.kb || 0) * Math.pow(0.0004, dt / 1000);
   B.fx = B.fx.filter(p => (p.life -= dt) > 0); B.fx.forEach(p => { p.x += (p.vx || 0) * dt / 16; p.y += (p.vy || 0) * dt / 16; if (p.vy != null) p.vy += (p.g || 0) * dt / 16; });
   B.texts = B.texts.filter(t => (t.life -= dt) > 0); B.texts.forEach(t => t.y -= dt * 0.04);
   if (B.banner) { B.banner.life -= dt; if (B.banner.life <= 0) B.banner = null; }
@@ -991,9 +1028,12 @@ function update(dt) {
     if (B.q) {
       const q = B.q; q.t += dt; const p = q.t / q.dur;
       const f = q.actor;
-      f.lunge = p < 0.35 ? p / 0.35 : p < 0.65 ? 1 : 1 - (p - 0.65) / 0.35;
       const lerp = (a, b, k) => a + (b - a) * k;
-      f.arm = p < 0.3 ? lerp(0.6, -2.1, p / 0.3) : p < 0.5 ? lerp(-2.1, 1.3, (p - 0.3) / 0.2) : p < 0.7 ? 1.3 : lerp(1.3, 0.6, (p - 0.7) / 0.3);
+      const oCub = k => 1 - Math.pow(1 - k, 3), oQ = k => 1 - Math.pow(1 - k, 4), ioC = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      const oBack = k => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+      // lấy đà lùi -> lao tới có nảy -> giữ -> về chỗ êm
+      f.lunge = p < 0.3 ? -0.14 * oCub(p / 0.3) : p < 0.5 ? lerp(-0.14, 1, oBack((p - 0.3) / 0.2)) : p < 0.66 ? 1 : lerp(1, 0, ioC((p - 0.66) / 0.34));
+      f.arm = p < 0.3 ? lerp(0.6, -2.1, oCub(p / 0.3)) : p < 0.5 ? lerp(-2.1, 1.45, oQ((p - 0.3) / 0.2)) : p < 0.66 ? lerp(1.45, 1.25, (p - 0.5) / 0.16) : lerp(1.25, 0.6, ioC((p - 0.66) / 0.34));
       f.swoosh = p > 0.3 && p < 0.62 ? 1 - Math.abs(p - 0.46) / 0.16 : 0;
       if (!q.hit && p >= 0.5) { q.hit = true; doAction(f, q.tgt, false); }
       if (p >= 1) {
@@ -1063,7 +1103,7 @@ function doAction(actor, tgt, fast) {
       setTimeout(() => {
         if (!B) return;
         addText(tgt, blocked && dmg === 0 ? 'Chặn!' : (crit ? 'CHÍ MẠNG -' : '-') + dmg, blocked ? '#c8d6e5' : crit ? '#ffd040' : '#fff', crit);
-        tgt.flash = 1; B.shake = crit ? 8 : 4;
+        tgt.flash = 1; B.shake = crit ? 8 : 4; tgt.kb = crit ? 1 : 0.6; B.hitstop = crit ? 120 : 60; B.zoom = crit ? 1.07 : 1.03;
         burst(tgt, perk ? PERKS[perk].c : '#fff2a0', crit ? 14 : 8);
         sfx(blocked ? 'block' : crit ? 'crit' : 'hit');
       }, h * 140);
@@ -1136,16 +1176,28 @@ function drawHud(ctx, f, left) {
 }
 function drawBattle(now) {
   const ctx = bx, { A, O } = B;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
   if (B.shake) ctx.translate(rnd(-B.shake, B.shake), rnd(-B.shake, B.shake));
-  ctx.fillStyle = B.arena.sky[0]; ctx.fillRect(-20, -20, 400, BH + 40);
+  ctx.fillStyle = B.zone ? ZONES[B.zone].sky[0] : B.arena.sky[0]; ctx.fillRect(-20, -20, 400, BH + 40);
   ctx.translate(0, Math.round((BH - 640) * 0.62)); // màn hình dài: hạ sân đấu xuống giữa
-  drawArena(ctx, B.arena, now);
+  if (B.zone) drawZone(ctx, B.zone, now / 1000, B.zst, DPR); else drawArena(ctx, B.arena, now);
   const ground = 470;
+  // ống kính zoom nhẹ vào tâm trận khi có đòn mạnh
+  if (B.zoom > 1.0005) { ctx.translate(180, ground - 90); ctx.scale(B.zoom, B.zoom); ctx.translate(-180, -(ground - 90)); }
   for (const f of [A, O]) {
-    const dx = f.lunge * 56 * (f.side < 0 ? 1 : -1);
+    const dir = f.side < 0 ? 1 : -1;
+    const dx = f.lunge * 56 * dir - dir * (f.kb || 0) * 18; // lao tới + giật lùi khi trúng
     const fsc = 1.32 * Math.pow(BH / 640, 0.7); // máy càng dài, nhân vật càng to
-    drawFighter(ctx, f.x + dx, ground, fsc, f.look, f.side < 0 ? 1 : -1, { t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk, flash: f.flash, maxW: 170 });
+    // bóng mờ khi lao tới (afterimage)
+    if (f.swoosh > 0.25 && !f.dead) {
+      for (const [k, a] of [[0.45, 0.14], [0.72, 0.22]]) {
+        ctx.save(); ctx.globalAlpha = a * f.swoosh;
+        drawFighter(ctx, f.x + dx * k, ground, fsc, Object.assign({}, f.look, { glow: null }), dir, { key: 'g' + k + f.side, t: now / 1000, arm: f.arm, still: true, maxW: 170 });
+        ctx.restore();
+      }
+    }
+    drawFighter(ctx, f.x + dx, ground, fsc, f.look, dir, { key: 'b' + f.side, t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk, flash: f.flash, maxW: 170 });
     if (f.swoosh > 0) drawSwoosh(ctx, f, dx, ground);
     if (f.burn) { for (let i = 0; i < 2; i++) { ctx.fillStyle = `rgba(255,${120 + rint(0, 80)},30,.7)`; ctx.beginPath(); ctx.arc(f.x + rnd(-15, 15), ground - rnd(30, 110), rnd(3, 6), 0, Math.PI * 2); ctx.fill(); } }
   }
