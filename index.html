@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Đấu Trường Hiệp Sĩ</title>
+<meta name="theme-color" content="#1b1430">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Thanh tài nguyên -->
+  <header id="topbar">
+    <div class="who" id="btnName"><div class="ava">⚔</div><div><b id="heroName">Hiệp Sĩ</b><small id="heroPower">Lực chiến 0</small></div></div>
+    <div class="res"><span class="gold">🪙 <b id="gold">0</b></span><span class="gem">💎 <b id="gems">0</b></span></div>
+  </header>
+
+  <main id="screens">
+    <!-- Màn chính -->
+    <section id="scr-home" class="screen active">
+      <div class="league-chip" id="leagueChip"></div>
+      <canvas id="heroCanvas" width="360" height="330"></canvas>
+      <div class="modes">
+        <button class="mode" id="btnDungeon"><span class="ic">🏰</span><b>Hầm Ngục</b><small id="dungeonInfo"></small></button>
+        <button class="mode" id="btnCampaign"><span class="ic">🗺</span><b>Chiến Dịch</b><small id="campaignInfo"></small></button>
+        <button class="mode" id="btnChamp"><span class="ic">🏆</span><b>Giải Vô Địch</b><small id="champInfo"></small></button>
+        <button class="mode play" id="btnRanked"><span class="ic">⚔</span><b>ĐẤU HẠNG</b><small id="rankedInfo"></small></button>
+      </div>
+    </section>
+
+    <!-- Trang bị -->
+    <section id="scr-gear" class="screen">
+      <div class="gear-wrap">
+        <div class="slots left" id="slotsL"></div>
+        <canvas id="gearCanvas" width="200" height="260"></canvas>
+        <div class="slots right" id="slotsR"></div>
+      </div>
+      <div class="stats" id="statLine"></div>
+      <h3 class="bag-title">Túi đồ <small id="bagCount"></small><button id="btnOutfit" class="mini" style="margin-left:auto;background:linear-gradient(#ff3d6e,#8a1f40)">👘 Trang phục</button><button id="btnSellCommon" class="mini" style="margin-left:4px">Bán đồ Thường</button></h3>
+      <div class="bag" id="bag"></div>
+    </section>
+
+    <!-- Cửa hàng -->
+    <section id="scr-shop" class="screen">
+      <h2>Cửa hàng rương</h2>
+      <div class="shop" id="shop"></div>
+      <p class="hint">Rương càng quý càng dễ ra đồ Sử Thi và Huyền Thoại. Mỗi món đồ có một chiêu đặc biệt kèm tỉ lệ kích hoạt.</p>
+    </section>
+
+    <!-- Hạng -->
+    <section id="scr-rank" class="screen">
+      <h2>Con đường danh vọng</h2>
+      <div id="leaguePath"></div>
+    </section>
+  </main>
+
+  <nav id="tabs">
+    <button data-tab="shop">🛒<span>Cửa hàng</span></button>
+    <button data-tab="gear">🛡<span>Trang bị</span></button>
+    <button data-tab="home" class="on">⚔<span>Đấu trường</span></button>
+    <button data-tab="rank">🏅<span>Danh vọng</span></button>
+  </nav>
+
+  <!-- Lớp phủ: trận đấu -->
+  <div id="battle" class="overlay hidden">
+    <canvas id="battleCanvas" width="360" height="640"></canvas>
+    <div class="battle-ui">
+      <button id="btnSpeed" class="mini">x1</button>
+      <button id="btnSkip" class="mini">Bỏ qua ⏭</button>
+    </div>
+  </div>
+
+  <!-- Lớp phủ: hộp thoại -->
+  <div id="modal" class="overlay hidden"><div class="modal-box" id="modalBox"></div></div>
+  <div id="toast"></div>
+</div>
+<script src="anchors.js"></script>
+<script src="lop.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
