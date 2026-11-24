@@ -478,11 +478,13 @@ function drawWeaponFx(ctx, wi, ww, wl, rar, t, wk) {
 }
 // Đường giữa thân vũ khí theo từng hàng (tỉ lệ ngang 0..1) để tia sét và chớp sáng bám đúng vào lưỡi/cán
 // Hình bóng vũ khí tô một màu (để làm lớp điện tích bao quanh), lưu đệm theo màu
+// Lớp sáng ôm đúng hình vũ khí: hình bóng tô màu, làm mờ ra ngoài, có lề để quầng sáng không bị cắt
 function weaponSil(wi, col) {
   wi.__sil = wi.__sil || {}; if (wi.__sil[col]) return wi.__sil[col];
-  const c = document.createElement('canvas'); c.width = wi.naturalWidth; c.height = wi.naturalHeight; const x = c.getContext('2d');
-  x.filter = 'blur(3px)'; x.drawImage(wi, 0, 0); x.filter = 'none'; x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
-  return (wi.__sil[col] = c);
+  const W = wi.naturalWidth, H = wi.naturalHeight, P = Math.round(H * 0.06), c = document.createElement('canvas'); c.width = W + P * 2; c.height = H + P * 2; const x = c.getContext('2d');
+  x.filter = `blur(${Math.round(P * 0.45)}px)`; x.drawImage(wi, P, P); x.drawImage(wi, P, P); x.filter = 'none';
+  x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+  return (wi.__sil[col] = { c, p: P / H });
 }
 function wEdges(wi) {
   if (wi.__edges) return wi.__edges; const N = 60, out = new Array(N).fill(null);
@@ -497,6 +499,11 @@ function wProfile(wi) {
   return (wi.__prof = out);
 }
 function drawWeaponFx0(ctx, wi, ww, wl, rar, t) {
+  if (rar >= 3) { // quầng sáng phía sau, đúng hình và đúng chỗ vũ khí, sáng dần theo độ hiếm
+    const S2 = weaponSil(wi, RCOL[rar]), pw = S2.p * wl;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.45 + (rar - 3) * 0.13) * (0.8 + 0.2 * Math.sin(t * 3.2));
+    ctx.drawImage(S2.c, -ww / 2 - pw, -wl * 0.86 - pw, ww + pw * 2, wl + pw * 2); ctx.restore();
+  }
   ctx.drawImage(wi, -ww / 2, -wl * 0.86, ww, wl);
   if (rar < 3) return; // dưới Sử Thi (tím): không hiệu ứng
   const col = RCOL[rar], top = -wl * 0.86, len = wl * 0.8, prof = wProfile(wi), cxAt = (y) => (prof[Math.max(0, Math.min(39, Math.floor((y - top) / wl * 40)))] - 0.5) * ww;
@@ -586,7 +593,7 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
   if (wid2 && ready(wid2)) { const wi = SPR[wid2], wl = H * (WPN_LEN[L.wk] || 0.7), ww = wl * wi.naturalWidth / wi.naturalHeight;
     const ang = arm < 0.6 ? 0.25 + (arm - 0.6) / 2.7 * 2.3 : 0.25 + (arm - 0.6) / 0.7 * 1.45;
     ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang);
-    if (L.wR >= 3) { ctx.shadowColor = RCOL[L.wR]; ctx.shadowBlur = 6 + L.wR * 3 + Math.sin(t * 6) * 3; }
+    ctx.shadowBlur = 0; // quầng sáng vũ khí vẽ trong drawWeaponFx (ôm đúng hình)
     drawWeaponFx(ctx, wi, ww, wl, L.wR, t, L.wk); ctx.restore(); }
   ctx.restore();
 }
@@ -681,7 +688,7 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
       const hx = -W / 2 + W * (ANCH[bodyId] ? A.hand[0] - 0.04 : HAND.def.x), hy = -H + H * (ANCH[bodyId] ? A.hand[1] : HAND.def.y);
       const ang = arm < 0.6 ? 0.25 + (arm - 0.6) / 2.7 * 2.3 : 0.25 + (arm - 0.6) / 0.7 * 1.45;
       ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang);
-      if (L.wR >= 3) { ctx.shadowColor = RCOL[L.wR]; ctx.shadowBlur = 6 + L.wR * 3 + Math.sin(t * 6) * 3; }
+      ctx.shadowBlur = 0; // quầng sáng vũ khí vẽ trong drawWeaponFx (ôm đúng hình)
       drawWeaponFx(ctx, wi, ww, wl, L.wR, t, L.wk);
       ctx.restore();
     }
