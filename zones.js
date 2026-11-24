@@ -13,9 +13,10 @@ const ZONES = {
   'ham-am':    { n: 'Hắc Ám Thành', sky: ['#07040f', '#2a1048', '#6a2a8a'], ground: '#1e1828', floor: '#2c2238' },
   'thanh-dia': { n: 'Thánh Địa',   sky: ['#4a3a1a', '#d9a845', '#fff2c0'], ground: '#d8c9a0', floor: '#efe2bd' },
   'lau-dai':   { n: 'Lâu Đài',     sky: ['#2a4a8a', '#6a8fd8', '#cfe2ff'], ground: '#6b5236', floor: '#8a6a44' },
+  'dau-truong':{ n: 'Đấu Trường',  sky: ['#140c2a', '#3a2260', '#c8603a'], ground: '#b98a52', floor: '#d6a868' },
 };
 const ZONE_OF_ELEM = { hoa: 'nui-lua', moc: 'rung', doc: 'dam-doc', tho: 'sa-mac', bang: 'bang', thuy: 'bien', loi: 'bao', phong: 'bao', am: 'ham-am', quang: 'thanh-dia', vo: 'lau-dai' };
-const ZONE_LIST = Object.keys(ZONES);
+const ZONE_LIST = Object.keys(ZONES).filter(k => k !== 'dau-truong'); // đấu trường chỉ dùng cho Đấu Hạng / Giải Vô Địch
 
 // số giả ngẫu nhiên ổn định (vẽ lớp tĩnh giống nhau mỗi lần)
 function zrand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
@@ -70,6 +71,19 @@ function zoneStatic(id, dpr) {
       for (let i = 0; i < 6; i++) { x.fillStyle = 'rgba(255,250,230,.55)'; x.fillRect(20 + i * 60, 230, 22, 240); x.fillRect(14 + i * 60, 224, 34, 10); }
       x.fillStyle = 'rgba(255,245,210,.5)'; x.beginPath(); x.moveTo(0, 230); x.lineTo(180, 150); x.lineTo(360, 230); x.fill();
       break;
+    case 'dau-truong': {
+      // ba tầng khán đài vòng cung (tường đá), khán giả vẽ ở lớp động
+      const tiers = [[150, '#4a3a52'], [230, '#5a4660'], [310, '#6a5470']];
+      for (const [ty, col] of tiers) { x.fillStyle = col; x.beginPath(); x.moveTo(-20, ty + 60); x.quadraticCurveTo(180, ty - 40, 380, ty + 60); x.lineTo(380, ty + 90); x.quadraticCurveTo(180, ty - 10, -20, ty + 90); x.closePath(); x.fill();
+        x.strokeStyle = 'rgba(0,0,0,.35)'; x.lineWidth = 2; x.beginPath(); x.moveTo(-20, ty + 90); x.quadraticCurveTo(180, ty - 10, 380, ty + 90); x.stroke(); }
+      // tường chắn sân + cổng vòm
+      x.fillStyle = '#3a2a30'; x.fillRect(0, 400, W, 70);
+      x.fillStyle = '#21161c'; for (let i = 0; i < 7; i++) { const ax = 12 + i * 52; x.beginPath(); x.moveTo(ax, 470); x.lineTo(ax, 425); x.arc(ax + 16, 425, 16, Math.PI, 0); x.lineTo(ax + 32, 470); x.fill(); }
+      x.fillStyle = '#c9a050'; x.fillRect(0, 398, W, 5);
+      // băng rôn đỏ dọc tường
+      for (let i = 0; i < 4; i++) { x.fillStyle = '#da251d'; x.fillRect(30 + i * 90, 404, 26, 28); x.fillStyle = '#ffde00'; x.font = 'bold 14px Arial'; x.fillText('★', 36 + i * 90, 423); }
+      break;
+    }
     default:
       x.fillStyle = '#7d86a0'; for (let i = 0; i < 5; i++) { const px = i * 80 - 10, h = 120 + (i % 2) * 50; x.fillRect(px, 470 - h, 50, h); for (let k = 0; k < 4; k++) x.fillRect(px + k * 14, 460 - h, 8, 12); }
       x.fillStyle = '#8a92aa'; x.fillRect(150, 230, 70, 240); x.fillStyle = '#c0392b'; x.beginPath(); x.moveTo(140, 232); x.lineTo(185, 160); x.lineTo(230, 232); x.fill();
@@ -79,6 +93,7 @@ function zoneStatic(id, dpr) {
   const fg = x.createLinearGradient(0, 455, 0, 520); fg.addColorStop(0, Z.floor); fg.addColorStop(1, Z.ground);
   x.fillStyle = fg; x.beginPath(); x.ellipse(180, 478, 230, 34, 0, 0, Math.PI * 2); x.fill();
   x.fillStyle = 'rgba(0,0,0,.12)'; for (let i = 0; i < 16; i++) x.fillRect(r() * W, 500 + r() * 140, 20 + r() * 30, 4);
+  if (id === 'dau-truong') { x.strokeStyle = 'rgba(255,240,200,.55)'; x.lineWidth = 3; x.beginPath(); x.ellipse(180, 482, 150, 26, 0, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.ellipse(180, 482, 40, 8, 0, 0, Math.PI * 2); x.stroke(); }
   ZCACHE[key] = c; return c;
 }
 
@@ -153,6 +168,36 @@ function zoneAnim(x, id, t, st) {
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
       spawn(36, () => ({ k: 'spark', x: Math.random() * 360, y: 150 + Math.random() * 400, ph: Math.random() * 6, life: Math.random() }));
       break;
+    case 'dau-truong': {
+      // đèn chiếu quét
+      x.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 2; i++) { const a = Math.sin(t * 0.6 + i * 2) * 0.5; x.globalAlpha = 0.09; x.fillStyle = '#fff3c0'; x.beginPath(); x.moveTo(i ? 340 : 20, 0); x.lineTo(180 + a * 160 - 50, 480); x.lineTo(180 + a * 160 + 50, 480); x.fill(); }
+      x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+      // khán giả: mỗi người một đầu + vai, nhún theo nhịp riêng, thỉnh thoảng giơ tay
+      if (!st.crowd) {
+        st.crowd = []; const rr = zrand(4242);
+        const SK = ['#f0c090', '#d9a070', '#b07850', '#f5d0a8'], SH = ['#da251d', '#ffde00', '#2a6fd0', '#f5f5f5', '#2aa84a', '#da251d', '#e07a1a'];
+        for (const [ty, rows] of [[150, 2], [230, 2], [310, 2]]) for (let row = 0; row < rows; row++) for (let px = -10; px < 372; px += 11 + rr() * 3) {
+          const u = px / 360 - 0.5, y = ty + 40 + row * 16 - (1 - 4 * u * u) * 50 + 10;
+          st.crowd.push({ x: px, y, sk: SK[Math.floor(rr() * 4)], sh: SH[Math.floor(rr() * SH.length)], ph: rr() * 6.28, sp: 4 + rr() * 4, arm: rr() < 0.35, flag: rr() < 0.06 });
+        }
+      }
+      for (const c of st.crowd) {
+        const hop = Math.max(0, Math.sin(t * c.sp + c.ph)) * 3.5;
+        x.fillStyle = c.sh; x.beginPath(); x.ellipse(c.x, c.y + 6 - hop, 5.5, 5, 0, Math.PI, 0); x.fill();
+        x.fillStyle = c.sk; x.beginPath(); x.arc(c.x, c.y - 1 - hop, 3.4, 0, Math.PI * 2); x.fill();
+        if (c.arm && Math.sin(t * c.sp * 0.5 + c.ph) > 0.2) { x.strokeStyle = c.sk; x.lineWidth = 1.6; x.beginPath(); x.moveTo(c.x - 4, c.y + 3 - hop); x.lineTo(c.x - 6, c.y - 7 - hop); x.moveTo(c.x + 4, c.y + 3 - hop); x.lineTo(c.x + 6, c.y - 7 - hop); x.stroke(); }
+        if (c.flag) vnFlag(x, c.x + 3, c.y - 14 - hop, 12, 8, t * 1.5 + c.ph, 0.6);
+      }
+      // cờ Việt Nam lớn trên nóc khán đài
+      for (const [fx, fy, w] of [[40, 64, 44], [180, 40, 60], [320, 64, 44]]) {
+        x.fillStyle = '#d8d0c0'; x.fillRect(fx - 1.5, fy, 3, 90);
+        vnFlag(x, fx + 1.5, fy + 2, w, w * 2 / 3, t, 1);
+      }
+      // pháo giấy rơi
+      spawn(40, () => ({ k: 'confetti', x: Math.random() * 360, y: -Math.random() * 640, vx: (Math.random() - 0.5) * 0.6, vy: 0.8 + Math.random() * 1.2, c: ['#da251d', '#ffde00', '#ffffff'][Math.floor(Math.random() * 3)], ph: Math.random() * 6 }));
+      break;
+    }
     default: // lâu đài: cờ bay
       for (let i = 0; i < 3; i++) { const fx = 40 + i * 140, fy = 300 - (i % 2) * 50; x.fillStyle = '#5a3a22'; x.fillRect(fx, fy, 3, 40); x.fillStyle = '#c0392b'; x.beginPath(); x.moveTo(fx + 3, fy); for (let k = 0; k <= 6; k++) x.lineTo(fx + 3 + k * 5, fy + Math.sin(t * 5 + k * 0.8 + i) * 3); x.lineTo(fx + 33, fy + 14); for (let k = 6; k >= 0; k--) x.lineTo(fx + 3 + k * 5, fy + 14 + Math.sin(t * 5 + k * 0.8 + i) * 3); x.fill(); }
       spawn(10, () => ({ k: 'cloud', x: Math.random() * 400, y: 40 + Math.random() * 120, vx: 0.15 + Math.random() * 0.2, r: 30 + Math.random() * 30 }));
@@ -177,10 +222,26 @@ function zoneAnim(x, id, t, st) {
         x.globalAlpha = 0.35; x.strokeStyle = '#aab8e0'; x.lineWidth = 1; x.beginPath(); x.moveTo(p.x, p.y); x.lineTo(p.x + p.vx * 2, p.y + 14); x.stroke(); break;
       case 'wisp': x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.35 + Math.sin(t * 2 + p.ph) * 0.25; const wx = p.x + Math.sin(t * 0.5 + p.ph) * 30, wy = p.y + Math.cos(t * 0.7 + p.ph) * 20; const wg = x.createRadialGradient(wx, wy, 1, wx, wy, 12); wg.addColorStop(0, '#e0b0ff'); wg.addColorStop(1, 'rgba(160,80,255,0)'); x.fillStyle = wg; x.fillRect(wx - 12, wy - 12, 24, 24); x.globalCompositeOperation = 'source-over'; break;
       case 'spark': x.globalCompositeOperation = 'lighter'; x.globalAlpha = Math.max(0, Math.sin(t * 2.5 + p.ph)); x.fillStyle = '#fff4b0'; x.beginPath(); x.arc(p.x, p.y - (t * 6 + p.ph * 30) % 60, 1.8, 0, Math.PI * 2); x.fill(); x.globalCompositeOperation = 'source-over'; break;
+      case 'confetti': p.x += p.vx + Math.sin(t * 2 + p.ph) * 0.4; p.y += p.vy; if (p.y > 470) { p.y = -10; p.x = Math.random() * 360; }
+        x.globalAlpha = 0.9; x.fillStyle = p.c; x.save(); x.translate(p.x, p.y); x.rotate(t * 3 + p.ph); x.fillRect(-2.5, -1.2, 5, 2.4); x.restore(); break;
       case 'cloud': p.x += p.vx; if (p.x - p.r > 400) p.x = -p.r * 2; x.globalAlpha = 0.6; x.fillStyle = '#fff'; x.beginPath(); x.ellipse(p.x, p.y, p.r, p.r * 0.35, 0, 0, Math.PI * 2); x.fill(); break;
     }
   }
   x.restore();
+}
+// Cờ Việt Nam tung bay: nền đỏ, sao vàng năm cánh, lượn sóng theo chiều ngang (gốc ở cán cờ)
+function vnFlag(x, fx, fy, w, h, t, alpha) {
+  const N = 14; x.save(); x.globalAlpha = alpha;
+  const wave = (k) => Math.sin(t * 4 - k * 5) * h * 0.12 * k;
+  for (let i = 0; i < N; i++) {
+    const k0 = i / N, k1 = (i + 1) / N, shade = 0.86 + Math.sin(t * 4 - k0 * 5 + 1.2) * 0.14;
+    x.fillStyle = `rgb(${Math.round(218 * shade)},${Math.round(37 * shade)},${Math.round(29 * shade)})`;
+    x.beginPath(); x.moveTo(fx + w * k0, fy + wave(k0)); x.lineTo(fx + w * k1 + 0.6, fy + wave(k1)); x.lineTo(fx + w * k1 + 0.6, fy + h + wave(k1)); x.lineTo(fx + w * k0, fy + h + wave(k0)); x.fill();
+  }
+  const cx = fx + w * 0.5, cy = fy + h * 0.5 + wave(0.5), R = h * 0.3;
+  x.fillStyle = '#ffde00'; x.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? R * 0.382 : R; x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+  x.closePath(); x.fill(); x.restore();
 }
 // Vẽ cảnh: lớp tĩnh (lệch nhẹ theo thời gian tạo chiều sâu) + chuyển động
 function drawZone(x, id, t, st, dpr) {

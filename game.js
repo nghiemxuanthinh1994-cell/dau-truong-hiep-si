@@ -470,13 +470,13 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
   const breathe = 1 + Math.sin(t * 2.4 + x) * 0.018, hop = pose.walk ? Math.abs(Math.sin(pose.walk)) * 6 * sc : 0;
   ctx.scale(facing, 1); ctx.translate(0, -hop); ctx.rotate(lean - dead * 1.35); ctx.translate(-dead * 18, 0);
   ctx.scale(1 + (breathe - 1) * -0.5, breathe); ctx.globalAlpha = 1 - dead * 0.35;
+  if (!pose.still) ctx.transform(1, 0, Math.sin(t * 1.6 + x * 0.03) * 0.022, 1, 0, 0); // đung đưa cả khối, chân đứng yên, giữ nét
   const ox = -Wc * (LOPM.cx || 0.5), oy = -Hc * LOPM.feet; // khung ảnh: tâm thân và chân trùng gốc toạ độ
   const P = L.paper;
   const [pc, px, PW, PH] = scratch('paper' + (pose.key || ''), Wc, Hc);
-  const amp = (pose.still ? 0 : 2.4) * sc;
-  for (const v of ['giay', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) warpInto(px, SPR[id], PW, PH, t, amp, x * 0.03); }
+  for (const v of ['giay', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) px.drawImage(SPR[id], 4, 4, PW - 8, PH - 8); }
   flashScratch(px, PW, PH, (pose.flash || 0) * 0.7);
-  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = (6 + (L.tier || 0) * 2.5) * (0.8 + Math.sin(t * 3) * 0.2); }
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = Math.min(10, 4 + (L.tier || 0) * 1.2); }
   ctx.drawImage(pc, 0, 0, PW, PH, ox - 4 / DPR, oy - 4 / DPR, PW / DPR, PH / DPR); ctx.shadowBlur = 0;
   const hx = ox + Wc * LOPM.hand[0], hy = oy + Hc * LOPM.hand[1], sx = ox + Wc * LOPM.off[0], sy = oy + Hc * LOPM.off[1];
   if (L.sh && ready(L.sh)) { const si = SPR[L.sh], shh = H * 0.32, sw = shh * si.naturalWidth / si.naturalHeight;
@@ -544,13 +544,12 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   ctx.translate(-dead * 18, 0);
   ctx.scale(1 + (breathe - 1) * -0.5, breathe);
   ctx.globalAlpha = 1 - dead * 0.35;
-  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = (L.boss ? 26 : 10 + (L.tier || 2) * 5) * (0.8 + Math.sin(t * 3) * 0.2); }
+  if (!pose.still) ctx.transform(1, 0, Math.sin(t * 1.6 + x * 0.03) * (L.boss ? 0.026 : 0.02), 1, 0, 0); // đung đưa cả khối, chân đứng yên
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = L.boss ? 12 : Math.min(10, 4 + (L.tier || 2) * 1.5); }
   const wid = useLayer ? bodyId : L.spr;
-  const [fc, fx, FW, FH] = scratch('f' + (pose.key || '') + wid, W, H);
-  warpInto(fx, im, FW, FH, t, (pose.still ? 0 : (L.boss ? 2.8 : 2.2)) * sc, x * 0.03);
-  flashScratch(fx, FW, FH, (pose.flash || 0) * 0.75);
-  ctx.drawImage(fc, 0, 0, FW, FH, -W / 2 - 4 / DPR, -H - 4 / DPR, FW / DPR, FH / DPR);
+  ctx.drawImage(im, -W / 2, -H, W, H);
   ctx.shadowBlur = 0;
+  if (pose.flash > 0 && SPR_WHITE[wid]) { ctx.globalAlpha = pose.flash * 0.75; ctx.drawImage(SPR_WHITE[wid], -W / 2, -H, W, H); ctx.globalAlpha = 1 - dead * 0.35; }
   const A = anchorOf(bodyId);
   const ov = (id, R2, cx, cy, w, alignBottom) => {
     if (!id || !ready(id)) return; const oi = SPR[id], h2 = w * oi.naturalHeight / oi.naturalWidth;
@@ -962,7 +961,7 @@ function mkFighter(f, side, hpStart) {
   return {
     name: f.name, side, look: lookOf(f), elem: elemOf(f), passive: f.mon ? f.mon.ps : null, revived: false, swoosh: 0, swC: '#fff', maxHp: st.hp, hp: hpStart != null ? Math.min(hpStart, st.hp) : st.hp,
     atk: st.atk, block: st.block, crit: st.crit || 10, interval: 1000 / (1 + (st.speed || 0) / 100), perks,
-    x: side < 0 ? -60 : 420, homeX: side < 0 ? 84 : 276, next: side < 0 ? 0 : 120,
+    x: side < 0 ? -60 : 420, homeX: side < 0 ? 80 : 280, next: side < 0 ? 0 : 120,
     burn: 0, poison: 0, guard: false, stun: false, swing: 0, arm: 0.6, flash: 0, dead: 0, lunge: 0, walk: 0, shownHp: 0,
   };
 }
@@ -1006,7 +1005,7 @@ function update(dt) {
   for (const f of [A, O]) { f.flash = Math.max(0, f.flash - dt / 200); f.shownHp += (f.hp - f.shownHp) * Math.min(1, dt / 150); }
   B.shake = Math.max(0, B.shake - dt / 30);
   // khựng hình khi trúng đòn (hit-stop) và zoom ống kính hồi về
-  if (B.hitstop > 0) { B.hitstop -= dt; dt *= 0.06; }
+  if (B.hitstop > 0) { B.hitstop -= dt; dt *= 0.15; }
   B.zoom = 1 + ((B.zoom || 1) - 1) * Math.pow(0.002, dt / 1000);
   for (const f of [A, O]) f.kb = (f.kb || 0) * Math.pow(0.0004, dt / 1000);
   B.fx = B.fx.filter(p => (p.life -= dt) > 0); B.fx.forEach(p => { p.x += (p.vx || 0) * dt / 16; p.y += (p.vy || 0) * dt / 16; if (p.vy != null) p.vy += (p.g || 0) * dt / 16; });
@@ -1103,7 +1102,7 @@ function doAction(actor, tgt, fast) {
       setTimeout(() => {
         if (!B) return;
         addText(tgt, blocked && dmg === 0 ? 'Chặn!' : (crit ? 'CHÍ MẠNG -' : '-') + dmg, blocked ? '#c8d6e5' : crit ? '#ffd040' : '#fff', crit);
-        tgt.flash = 1; B.shake = crit ? 8 : 4; tgt.kb = crit ? 1 : 0.6; B.hitstop = crit ? 120 : 60; B.zoom = crit ? 1.07 : 1.03;
+        tgt.flash = 1; B.shake = crit ? 5 : 2.5; tgt.kb = crit ? 1 : 0.6; B.hitstop = crit ? 70 : 35; B.zoom = crit ? 1.05 : 1.02;
         burst(tgt, perk ? PERKS[perk].c : '#fff2a0', crit ? 14 : 8);
         sfx(blocked ? 'block' : crit ? 'crit' : 'hit');
       }, h * 140);
@@ -1178,7 +1177,7 @@ function drawBattle(now) {
   const ctx = bx, { A, O } = B;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
-  if (B.shake) ctx.translate(rnd(-B.shake, B.shake), rnd(-B.shake, B.shake));
+  if (B.shake > 0.3) { const k = now / 1000; ctx.translate(Math.round(Math.sin(k * 61) * B.shake * DPR) / DPR, Math.round(Math.cos(k * 47) * B.shake * 0.6 * DPR) / DPR); }
   ctx.fillStyle = B.zone ? ZONES[B.zone].sky[0] : B.arena.sky[0]; ctx.fillRect(-20, -20, 400, BH + 40);
   ctx.translate(0, Math.round((BH - 640) * 0.62)); // màn hình dài: hạ sân đấu xuống giữa
   if (B.zone) drawZone(ctx, B.zone, now / 1000, B.zst, DPR); else drawArena(ctx, B.arena, now);
@@ -1187,16 +1186,8 @@ function drawBattle(now) {
   if (B.zoom > 1.0005) { ctx.translate(180, ground - 90); ctx.scale(B.zoom, B.zoom); ctx.translate(-180, -(ground - 90)); }
   for (const f of [A, O]) {
     const dir = f.side < 0 ? 1 : -1;
-    const dx = f.lunge * 56 * dir - dir * (f.kb || 0) * 18; // lao tới + giật lùi khi trúng
+    const dx = f.lunge * 42 * dir - dir * (f.kb || 0) * 14; // lao tới + giật lùi khi trúng
     const fsc = 1.32 * Math.pow(BH / 640, 0.7); // máy càng dài, nhân vật càng to
-    // bóng mờ khi lao tới (afterimage)
-    if (f.swoosh > 0.25 && !f.dead) {
-      for (const [k, a] of [[0.45, 0.14], [0.72, 0.22]]) {
-        ctx.save(); ctx.globalAlpha = a * f.swoosh;
-        drawFighter(ctx, f.x + dx * k, ground, fsc, Object.assign({}, f.look, { glow: null }), dir, { key: 'g' + k + f.side, t: now / 1000, arm: f.arm, still: true, maxW: 170 });
-        ctx.restore();
-      }
-    }
     drawFighter(ctx, f.x + dx, ground, fsc, f.look, dir, { key: 'b' + f.side, t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk, flash: f.flash, maxW: 170 });
     if (f.swoosh > 0) drawSwoosh(ctx, f, dx, ground);
     if (f.burn) { for (let i = 0; i < 2; i++) { ctx.fillStyle = `rgba(255,${120 + rint(0, 80)},30,.7)`; ctx.beginPath(); ctx.arc(f.x + rnd(-15, 15), ground - rnd(30, 110), rnd(3, 6), 0, Math.PI * 2); ctx.fill(); } }
@@ -1246,7 +1237,7 @@ function startRanked() {
   const li = leagueIdx(S.trophies);
   const make = () => genOpponent(powerOf(myStats()) * rnd(0.82, 1.12), Math.round(avgIlvl()), { rarW: [Math.max(4, 45 - li * 7), 30, 14 + li * 3, 6 + li * 3, 1 + li * 2, li >= 4 ? li - 2 : 0, li >= 6 ? 2 : 0] });
   let op = make();
-  const show = () => vsScreen(op, { title: `Đấu Hạng · ${LEAGUES[li].n}`, reroll: () => { op = make(); show(); }, onEnd: rankedEnd });
+  const show = () => vsScreen(op, { title: `Đấu Hạng · ${LEAGUES[li].n}`, arena: 'dau-truong', reroll: () => { op = make(); show(); }, onEnd: rankedEnd });
   show();
 }
 function rankedEnd(win) {
@@ -1402,7 +1393,7 @@ function champScreen() {
       const op = genOpponent(powerOf(myStats()) * bot.lvl * (1 + S.champ.div * 0.04), Math.round(avgIlvl()), { name: bot.name });
       op.banner = bot.banner;
       vsScreen(op, {
-        title: 'Giải Vô Địch', note: `Đối thủ ${bot.lvl > 1.05 ? 'mạnh hơn' : bot.lvl < 0.95 ? 'yếu hơn' : 'ngang sức'} · Thắng +3 điểm, thua +0`,
+        title: 'Giải Vô Địch', arena: 'dau-truong', note: `Đối thủ ${bot.lvl > 1.05 ? 'mạnh hơn' : bot.lvl < 0.95 ? 'yếu hơn' : 'ngang sức'} · Thắng +3 điểm, thua +0`,
         onEnd: (win) => {
           if (win) { S.champ.pts += 3; const g = 15 + dropLevel() * 5; S.gold += g; if (Math.random() < .35) queueChests([{ type: 'wood' }]); save(); resultModal(`<h3>Thắng!</h3><div class="reward-line"><span>+3 điểm</span><span>🪙 +${fmt(g)}</span></div>`); }
           else { save(); resultModal(`<h3 style="color:#ff6a5a">Thua</h3><p class="hint">Không mất điểm. Chọn đối thủ yếu hơn để leo hạng chắc chắn.</p>`); }
