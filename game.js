@@ -484,6 +484,12 @@ function weaponSil(wi, col) {
   x.filter = 'blur(3px)'; x.drawImage(wi, 0, 0); x.filter = 'none'; x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
   return (wi.__sil[col] = c);
 }
+function wEdges(wi) {
+  if (wi.__edges) return wi.__edges; const N = 60, out = new Array(N).fill(null);
+  try { const w = 64, c = document.createElement('canvas'); c.width = w; c.height = N; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(wi, 0, 0, w, N);
+    const d = x.getImageData(0, 0, w, N).data; for (let y = 0; y < N; y++) { let a = -1, b = -1; for (let xx = 0; xx < w; xx++) if (d[(y * w + xx) * 4 + 3] > 120) { if (a < 0) a = xx; b = xx; } if (a >= 0) out[y] = [a / w, (b + 1) / w]; } } catch (e) { }
+  return (wi.__edges = out);
+}
 function wProfile(wi) {
   if (wi.__prof) return wi.__prof; const N = 40, out = new Array(N).fill(0.5);
   try { const w = 64, h = N, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(wi, 0, 0, w, h);
@@ -491,12 +497,6 @@ function wProfile(wi) {
   return (wi.__prof = out);
 }
 function drawWeaponFx0(ctx, wi, ww, wl, rar, t) {
-  if (rar >= 4) { // viền điện tích phía SAU vũ khí: hình bóng phóng to nhẹ, rung nháy -> mép vũ khí rực sáng, chi tiết thép vẫn rõ
-    const sil = weaponSil(wi, RCOL[rar]), R = zrand(Math.floor(t * 20) * 7 + rar), tp = -wl * 0.86;
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (let k = 0; k < 2; k++) { const sc = 1.08 + R() * 0.06 + rar * 0.006; ctx.globalAlpha = (0.45 + rar * 0.05) * (0.6 + R() * 0.4); ctx.drawImage(sil, -ww * sc / 2 + (R() - 0.5) * 2.5, tp - wl * (sc - 1) / 2 + (R() - 0.5) * 2.5, ww * sc, wl * sc); }
-    ctx.restore();
-  }
   ctx.drawImage(wi, -ww / 2, -wl * 0.86, ww, wl);
   if (rar < 3) return; // dưới Sử Thi (tím): không hiệu ứng
   const col = RCOL[rar], top = -wl * 0.86, len = wl * 0.8, prof = wProfile(wi), cxAt = (y) => (prof[Math.max(0, Math.min(39, Math.floor((y - top) / wl * 40)))] - 0.5) * ww;
@@ -510,20 +510,20 @@ function drawWeaponFx0(ctx, wi, ww, wl, rar, t) {
     ctx.globalAlpha = a * 0.9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px - sz * 1.8, py); ctx.lineTo(px + sz * 1.8, py); ctx.moveTo(px, py - sz * 1.8); ctx.lineTo(px, py + sz * 1.8); ctx.stroke();
     drawStar4(ctx, px, py, sz, col, a);
   }
-  // ĐIỆN TÍCH (từ Huyền Thoại): lớp viền năng lượng ôm sát hình vũ khí, rung nháy như dòng điện chạy
+  // TIA SÉT NHỎ (từ Huyền Thoại): các tia mảnh bò dọc theo hai mép thân vũ khí, từ chuôi lên mũi, rung nháy liên tục
   if (rar >= 4) {
-    // tia phóng điện ngắn bật ra từ mép lưỡi rồi tắt (không vẽ liên tục)
-    const nb = rar >= 6 ? 2 : 1;
+    const E = wEdges(wi), N = E.length, fr = Math.floor(t * 24), nb = rar - 2, segL = 0.16 + rar * 0.01;
+    const edgeX = (y, side) => { const r = Math.max(0, Math.min(N - 1, Math.floor((y - top) / wl * N))), e = E[r]; return e ? (side < 0 ? e[0] : e[1]) * ww - ww / 2 : null; };
     for (let b = 0; b < nb; b++) {
-      const bp = 0.55 + b * 0.23, bph = (t + b * 0.31) % bp; if (bph > 0.14) continue;
-      const RB = zrand(Math.floor((t + b * 0.31) / bp) * 211 + b * 17 + rar), y0 = top + len * (0.05 + RB() * 0.6), x0 = cxAt(y0), dir = RB() < 0.5 ? -1 : 1;
-      const x1 = x0 + dir * (12 + RB() * 14), y1 = y0 + (RB() - 0.3) * 22, fade = 1 - bph / 0.14;
-      let pts = [[x0, y0], [x1, y1]];
-      for (let it = 0; it < 4; it++) { const np = [pts[0]]; for (let q = 1; q < pts.length; q++) { const [ax, ay] = pts[q - 1], [bx, by] = pts[q], dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy), o = (RB() - 0.5) * l * 0.45; np.push([(ax + bx) / 2 - dy / l * o, (ay + by) / 2 + dx / l * o], pts[q]); } pts = np; }
+      const side = b % 2 ? -1 : 1, head = 1 - ((t * (0.55 + b * 0.07) + b / nb) % 1); // vị trí đầu tia (0 = mũi, 1 = chuôi), chạy dần lên mũi
+      const yA = top + len * Math.max(0, head - segL), yB = top + len * Math.min(1, head), R = zrand(fr * 31 + b * 7 + rar), pts = [];
+      for (let k = 0; k <= 7; k++) { const y = yA + (yB - yA) * k / 7, ex = edgeX(y, side); if (ex == null) continue; pts.push([ex + side * (0.8 + R() * 1.6) + (R() - 0.5) * 2.4, y + (R() - 0.5) * 2]); }
+      if (pts.length < 3) continue;
       const path = () => { ctx.beginPath(); pts.forEach(([x, y], q) => q ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
-      ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.globalAlpha = 0.55 * fade; ctx.strokeStyle = col; ctx.lineWidth = 3; path(); ctx.stroke();
-      ctx.shadowBlur = 0; ctx.globalAlpha = fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; path(); ctx.stroke();
-      ctx.globalAlpha = fade * 0.8; drawStar4(ctx, x0, y0, 4 + rar * 0.6, col, fade); // điểm phát tia lóe sáng
+      ctx.lineJoin = 'miter'; ctx.shadowColor = col; ctx.shadowBlur = 6;
+      ctx.globalAlpha = 0.55; ctx.strokeStyle = col; ctx.lineWidth = 2.2; path(); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.globalAlpha = 0.95; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8; path(); ctx.stroke();
+      if (R() < 0.35) { const [hx, hy] = pts[0]; drawStar4(ctx, hx, hy, 2.5 + rar * 0.4, col, 0.9); } // tia đi qua lóe nhẹ
     }
   }
   // vài hạt sao nhỏ lấp lánh dọc lưỡi
