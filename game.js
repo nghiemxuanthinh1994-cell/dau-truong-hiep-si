@@ -19,10 +19,11 @@ const RCOL = ['#9aa3ad', '#5fd36f', '#3fa0ff', '#b45cff', '#ff9a1f', '#2fe6e0', 
 const SLOTS = [
   { id: 'helmet',   n: 'Mũ',       ic: '⛑', side: 'L' },
   { id: 'shoulder', n: 'Giáp Vai', ic: '🦾', side: 'L' },
-  { id: 'armor',    n: 'Áo Giáp',  ic: '🦺', side: 'L' },
+  { id: 'armor',    n: 'Áo',       ic: '🦺', side: 'L' },
   { id: 'gloves',   n: 'Găng',     ic: '🧤', side: 'L' },
   { id: 'weapon',   n: 'Vũ khí',   ic: '🗡', side: 'R' },
   { id: 'shield',   n: 'Khiên',    ic: '🛡', side: 'R' },
+  { id: 'pants',    n: 'Quần',     ic: '👖', side: 'R' },
   { id: 'boots',    n: 'Giày',     ic: '🥾', side: 'R' },
 ];
 const WEAPONS = [
@@ -63,7 +64,7 @@ const PERKS = {
 };
 const PERK_BY_SLOT = {
   weapon: ['fire', 'whirl', 'thunder', 'leech', 'ice'], gloves: ['fire', 'whirl', 'poison', 'leech'],
-  helmet: ['heal', 'thunder', 'guard'], armor: ['guard', 'heal', 'ice'], shoulder: ['guard', 'thunder', 'fire'],
+  helmet: ['heal', 'thunder', 'guard'], armor: ['guard', 'heal', 'ice'], shoulder: ['guard', 'thunder', 'fire'], pants: ['guard', 'heal', 'whirl'],
   shield: ['guard', 'ice', 'thunder'], boots: ['whirl', 'poison', 'heal'],
 };
 const PERK_CHANCE = [7, 10, 13, 17, 22, 27, 32, 38];
@@ -174,7 +175,7 @@ const MON_NORMAL_ALL = MONSTERS.filter(m => !m.boss), MON_BOSS_ALL = MONSTERS.fi
 const MON_NORMAL = new Proxy([], { get: (t, k) => { const a = MON_NORMAL_ALL.filter(monReady); const r = a.length ? a : MON_NORMAL_ALL; return typeof r[k] === 'function' ? r[k].bind(r) : r[k]; } });
 const MON_BOSS = new Proxy([], { get: (t, k) => { const a = MON_BOSS_ALL.filter(monReady); const r = a.length ? a : MON_BOSS_ALL; return typeof r[k] === 'function' ? r[k].bind(r) : r[k]; } });
 const HERO_SPR = ['hs-1-thuong', 'hs-2-tinh-luyen', 'hs-3-hiem', 'hs-4-su-thi', 'hs-5-huyen-thoai', 'hs-6-truyen-thuyet'];
-const TIER_GLOW = [null, null, '#3fa0ff', '#c46cff', '#ffae2a', '#2fe6e0', '#ff3d6e', '#ffd700'];
+const TIER_GLOW = [null, null, null, '#c46cff', '#ffae2a', '#2fe6e0', '#ff3d6e', '#ffd700'];
 // Tủ trang phục: chọn ngoại hình tự do sau khi mở khóa
 const OUTFITS = [
   { id: 'hs-1-thuong', spr: 'hs-1-thuong', n: 'Tân Binh', tier: 0, how: 'Có sẵn', ok: () => true },
@@ -213,7 +214,8 @@ const PAUL_SPR = ['vai-1', 'vai-2', 'vai-3', 'vai-4', 'vai-5', 'vai-6', 'vai-7',
 const tierIdx = (it) => it ? Math.min(it.rar, 7) : -1;
 const LOPM = (typeof LOP !== 'undefined') ? LOP : null;
 const LOP_IDS = [];
-for (const v of ['dau', 'vai', 'giap', 'gang', 'giay']) for (let t = 0; t <= 8; t++) LOP_IDS.push(`lop-${v}-${t}`);
+for (const v of ['dau', 'vai', 'giap', 'quan', 'gang', 'giay']) for (let t = 0; t <= 8; t++) LOP_IDS.push(`lop-${v}-${t}`);
+for (const v of ['dau', 'vai', 'giap', 'quan', 'gang', 'giay']) for (let t = 1; t <= 8; t++) LOP_IDS.push(`ic-${v}-${t}`);
 // cấp lớp: món rar 0..7 -> lớp 1..8, ô trống -> 0; thiếu ảnh cấp cao thì lùi xuống
 const lopId = (v, it) => { let t = it ? Math.min(it.rar, 7) + 1 : 0; for (; t >= 0; t--) if (ready(`lop-${v}-${t}`)) return `lop-${v}-${t}`; return null; };
 // chọn ảnh theo cấp, thiếu ảnh cấp cao thì lùi dần xuống cấp thấp hơn
@@ -278,13 +280,14 @@ function itemName(it) {
   const base = it.slot === 'weapon' ? WEAPONS.find(w => w.k === it.wk).n : SLOTS.find(s => s.id === it.slot).n;
   return `${base} ${it.mat}`;
 }
+// Biểu tượng cắt từ chính lớp ghép khuôn (ic-<vùng>-<cấp>): nhìn giống hệt khi mặc
+const WEAR_REGION = { helmet: 'dau', shoulder: 'vai', armor: 'giap', pants: 'quan', gloves: 'gang', boots: 'giay' };
+function wearIconId(it) { const v = WEAR_REGION[it.slot]; if (!v) return null; for (let t = Math.min(it.rar, 7) + 1; t >= 1; t--) if (ready(`ic-${v}-${t}`)) return `ic-${v}-${t}`; return null; }
 function itemIconHTML(it) {
   const img = (id) => `<img class="ii" src="${id}.webp">`;
-  if (it.set && it.slot !== 'weapon') { const st = setOf(it.set); if (st && ready(st.spr)) return img(st.spr); }
   if (it.slot === 'weapon') { const id = wpnTierId(it.wk, it.rar); if (id && ready(id)) return img(id); }
-  const T = Math.min(it.rar, 7);
-  const tab = { shield: SHIELD_SPR, helmet: HELM_SPR, boots: BOOT_SPR, shoulder: PAUL_SPR, armor: BALD_SPR };
-  if (tab[it.slot]) { const id = pickTier(tab[it.slot], T); if (ready(id)) return img(id); }
+  const id2 = wearIconId(it); if (id2) return img(id2);
+  if (it.slot === 'shield') { const id = pickTier(SHIELD_SPR, Math.min(it.rar, 7)); if (ready(id)) return img(id); }
   return itemIcon(it);
 }
 function itemIcon(it) { return it.slot === 'weapon' ? WEAPONS.find(w => w.k === it.wk).ic : SLOTS.find(s => s.id === it.slot).ic; }
@@ -296,6 +299,7 @@ function itemStats(it) {
     case 'gloves': s.atk = P * 0.45; break;
     case 'helmet': s.hp = P * 3; break;
     case 'shoulder': s.hp = P * 2; s.atk = P * 0.15; break;
+    case 'pants': s.hp = P * 2.5; s.speed = Math.round(1 + it.rar); break;
     case 'armor':  s.hp = P * 5; break;
     case 'boots':  s.hp = P * 2; s.speed = Math.round(3 + it.rar * 1.5); break;
     case 'shield': s.hp = P * 3; s.block = 6 + it.rar * 2; break;
@@ -356,7 +360,7 @@ function migrate() {
 }
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
 
-const myStats = () => calcStats(S.gear);
+const myStats = () => (typeof applyBonuses === 'function' ? applyBonuses(calcStats(S.gear)) : calcStats(S.gear)); // + cấp nhân vật, thú linh
 const leagueIdx = (t) => { let i = 0; LEAGUES.forEach((l, k) => { if (t >= l.t) i = k; }); return i; };
 // Cấp vật phẩm rơi ra phụ thuộc tiến trình
 const dropLevel = () => Math.max(1, Math.floor(S.trophies / 45) + 1, (S.camp.ch - 1) * 10 + S.camp.st);
@@ -393,7 +397,7 @@ function lookFromGear(gear, banner, boss, outfit) {
   L0.wk = gear.weapon ? gear.weapon.wk : null; L0.wR = gear.weapon ? gear.weapon.rar : 0;
   L0.sh = gear.shield ? pickTier(SHIELD_SPR, Math.min(gear.shield.rar, 7)) : null; L0.sR = gear.shield ? gear.shield.rar : 0;
   L0.layered = true;
-  L0.paper = { dau: gear.helmet, vai: gear.shoulder, giap: gear.armor, gang: gear.gloves, giay: gear.boots };
+  L0.paper = { dau: gear.helmet, vai: gear.shoulder, giap: gear.armor, quan: gear.pants, gang: gear.gloves, giay: gear.boots };
   L0.bald = pickTier(BALD_SPR, Math.max(0, tierIdx(gear.armor)));
   L0.helm = gear.helmet ? pickTier(HELM_SPR, tierIdx(gear.helmet)) : null; L0.hR = tierIdx(gear.helmet);
   L0.boot = gear.boots ? pickTier(BOOT_SPR, tierIdx(gear.boots)) : null; L0.bR = tierIdx(gear.boots);
@@ -410,7 +414,7 @@ function heroTier(gear) {
   return clamp(Math.floor(s / SLOTS.length), 0, 5);
 }
 function lookFromMonster(m) {
-  return { spr: m.id, glow: ELEM[m.e].c, boss: !!m.boss, elem: m.e, monster: true, faceL: !!m.faceL };
+  return { spr: m.id, glow: ELEM[m.e].c, boss: !!m.boss, elem: m.e, monster: true, faceL: !!m.faceL, giant: !!m.giant };
 }
 const lookOf = (f) => f.mon ? lookFromMonster(f.mon) : lookFromGear(f.gear, f.banner, f.boss, f.outfit);
 const elemOf = (f) => { if (f.mon) return f.mon.e; const sb = setBonus(f.gear); if (sb) return sb.set.e; return f.gear.weapon ? PERK_ELEM[f.gear.weapon.perk] : 'vo'; };
@@ -448,6 +452,44 @@ function flashScratch(x, W, H, a) {
   if (a <= 0) return; x.globalCompositeOperation = 'source-atop'; x.globalAlpha = a; x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
   x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
 }
+// Ngôi sao 4 cánh lấp lánh
+function drawStar4(ctx, x, y, r, col, a) {
+  ctx.save(); ctx.globalAlpha *= a; ctx.fillStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = r * 2;
+  ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.22, y - r * 0.22); ctx.lineTo(x + r, y); ctx.lineTo(x + r * 0.22, y + r * 0.22);
+  ctx.lineTo(x, y + r); ctx.lineTo(x - r * 0.22, y + r * 0.22); ctx.lineTo(x - r, y); ctx.lineTo(x - r * 0.22, y - r * 0.22); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+// Vũ khí lung linh theo phẩm chất: phủ năng lượng, vệt sáng chạy dọc lưỡi, sao lấp lánh, hạt năng lượng bay quanh (từ Truyền Thuyết)
+// Điểm cầm của vũ khí: đo từ chính ảnh (tâm cán ở độ cao tay cầm), vì cán không luôn nằm giữa ảnh (lưỡi hái, rìu, kích lệch một bên)
+const GRIP_Y = { spear: 0.64, halberd: 0.64, scythe: 0.66, trident: 0.64, staff: 0.62 };
+function wGrip(wi, wk) {
+  const gy = GRIP_Y[wk] || 0.86; wi.__grip = wi.__grip || {}; if (wi.__grip[gy]) return wi.__grip[gy];
+  let gx = 0.5;
+  try {
+    const w = 96, h = Math.round(96 * wi.naturalHeight / wi.naturalWidth), c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(wi, 0, 0, w, h);
+    const y0 = Math.floor(h * (gy - 0.03)), y1 = Math.ceil(h * (gy + 0.03)), d = x.getImageData(0, y0, w, y1 - y0).data, xs = [];
+    for (let yy = 0; yy < y1 - y0; yy++) for (let xx = 0; xx < w; xx++) if (d[(yy * w + xx) * 4 + 3] > 140) xs.push(xx);
+    if (xs.length) { xs.sort((a, b) => a - b); gx = (xs[xs.length >> 1] + 0.5) / w; }
+  } catch (e) { }
+  return (wi.__grip[gy] = [gx, gy]);
+}
+function drawWeaponFx(ctx, wi, ww, wl, rar, t, wk) {
+  const [gx, gy] = wGrip(wi, wk); ctx.save(); ctx.translate(ww * (0.5 - gx), wl * (0.86 - gy)); drawWeaponFx0(ctx, wi, ww, wl, rar, t); ctx.restore();
+}
+function drawWeaponFx0(ctx, wi, ww, wl, rar, t) {
+  ctx.drawImage(wi, -ww / 2, -wl * 0.86, ww, wl);
+  if (rar < 3) return; // dưới Sử Thi (tím): không hiệu ứng
+  const col = RCOL[rar], top = -wl * 0.86, len = wl * 0.8;
+  ctx.save(); ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.12 + 0.1 * Math.sin(t * 5) + rar * 0.03; ctx.drawImage(wi, -ww / 2, top, ww, wl);
+  const k = (t * (0.6 + rar * 0.08)) % 1, sy = top + len * (1 - k);
+  const g = ctx.createRadialGradient(0, sy, 0, 0, sy, ww * 0.7); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.35, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = 0.55; ctx.fillStyle = g; ctx.fillRect(-ww, sy - ww, ww * 2, ww * 2);
+  ctx.globalAlpha = 1;
+  const n = 1 + rar; for (let i = 0; i < n; i++) { const kk = (t * 0.4 + i / n) % 1, py = top + len * kk, px = Math.sin(t * 3 + i * 1.9) * ww * 0.18, tw = Math.max(0, Math.sin(t * 7 + i * 2.3)); if (tw > 0.05) drawStar4(ctx, px, py, 2.5 + rar * 0.7, col, tw); }
+  if (rar >= 5) { for (let i = 0; i < 6 + rar; i++) { const a = t * 2.4 + i * 1.05, rr = ww * 0.45 + Math.sin(t * 3 + i) * 4, py = top + len * ((i * 0.13 + t * 0.25) % 1); ctx.globalAlpha = 0.7; ctx.fillStyle = i % 2 ? col : '#ffffff'; ctx.beginPath(); ctx.arc(Math.cos(a) * rr, py, 1.6 + (i % 3) * 0.6, 0, Math.PI * 2); ctx.fill(); } }
+  ctx.restore();
+}
 function drawPaper(ctx, x, y, sc, L, facing, pose) {
   pose = pose || {};
   const t = pose.t != null ? pose.t : performance.now() / 1000, dead = pose.dead || 0;
@@ -474,20 +516,37 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
   const ox = -Wc * (LOPM.cx || 0.5), oy = -Hc * LOPM.feet; // khung ảnh: tâm thân và chân trùng gốc toạ độ
   const P = L.paper;
   const [pc, px, PW, PH] = scratch('paper' + (pose.key || ''), Wc, Hc);
-  for (const v of ['giay', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) px.drawImage(SPR[id], 4, 4, PW - 8, PH - 8); }
+  for (const v of ['giay', 'quan', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) px.drawImage(SPR[id], 4, 4, PW - 8, PH - 8); }
   flashScratch(px, PW, PH, (pose.flash || 0) * 0.7);
   if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = Math.min(10, 4 + (L.tier || 0) * 1.2); }
   ctx.drawImage(pc, 0, 0, PW, PH, ox - 4 / DPR, oy - 4 / DPR, PW / DPR, PH / DPR); ctx.shadowBlur = 0;
+  { // ánh hào quang phủ lên giáp khi mặc đồ từ Sử Thi (tím) trở lên; đồ thấp hơn không phát sáng
+    let top = -1; for (const v in P) if (P[v] && P[v].rar > top) top = P[v].rar;
+    if (top >= 3 && dead < 1) {
+      const c2 = RCOL[top]; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (0.12 + 0.08 * Math.sin(t * 3.2)) * (top >= 6 ? 1.5 : 1); ctx.shadowColor = c2; ctx.shadowBlur = 12;
+      ctx.drawImage(pc, 0, 0, PW, PH, ox - 4 / DPR, oy - 4 / DPR, PW / DPR, PH / DPR); ctx.shadowBlur = 0;
+      // dải sáng chạy dọc người
+      const k = (t * 0.45) % 1, sy = oy + Hc * (LOPM.figTop + (1 - k) * (LOPM.feet - LOPM.figTop));
+      const g = ctx.createLinearGradient(0, sy - 18, 0, sy + 18); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, c2); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.35; ctx.globalCompositeOperation = 'source-atop'; ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + 0.1 * Math.sin(t * 6); ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(ox + Wc * (LOPM.cx || 0.5), sy, Wc * 0.28, 16, 0, 0, Math.PI * 2); ctx.fill();
+      // tia lấp lánh quanh người
+      for (let i = 0; i < 3 + top; i++) { const a = t * 0.9 + i * 2.39, rx = Wc * 0.3, px2 = ox + Wc * (LOPM.cx || 0.5) + Math.cos(a) * rx, py2 = oy + Hc * (0.3 + ((i * 0.37 + t * 0.15) % 0.6)); const tw = Math.max(0, Math.sin(t * 5 + i * 1.7)); if (tw > 0.05) drawStar4(ctx, px2, py2, 3 + top * 0.6, c2, tw); }
+      ctx.restore();
+    }
+  }
   const hx = ox + Wc * LOPM.hand[0], hy = oy + Hc * LOPM.hand[1], sx = ox + Wc * LOPM.off[0], sy = oy + Hc * LOPM.off[1];
-  if (L.sh && ready(L.sh)) { const si = SPR[L.sh], shh = H * 0.32, sw = shh * si.naturalWidth / si.naturalHeight;
+  if (L.sh && ready(L.sh)) { const si = SPR[L.sh], shh = H * 0.44, sw = shh * si.naturalWidth / si.naturalHeight;
     if (L.sR >= 3) { ctx.shadowColor = RCOL[L.sR]; ctx.shadowBlur = 8 + L.sR * 2; }
-    ctx.drawImage(si, sx - sw / 2 + H * 0.03, sy - shh / 2, sw, shh); ctx.shadowBlur = 0; }
+    ctx.drawImage(si, sx - sw / 2 + H * 0.05, sy - shh * 0.48, sw, shh); ctx.shadowBlur = 0; }
   const wid2 = L.wk && wpnTierId(L.wk, L.wR);
   if (wid2 && ready(wid2)) { const wi = SPR[wid2], wl = H * (WPN_LEN[L.wk] || 0.7), ww = wl * wi.naturalWidth / wi.naturalHeight;
     const ang = arm < 0.6 ? 0.25 + (arm - 0.6) / 2.7 * 2.3 : 0.25 + (arm - 0.6) / 0.7 * 1.45;
     ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang);
-    if (L.wR >= 2) { ctx.shadowColor = RCOL[L.wR]; ctx.shadowBlur = 6 + L.wR * 3 + Math.sin(t * 6) * 3; }
-    ctx.drawImage(wi, -ww / 2, -wl * 0.86, ww, wl); ctx.restore(); }
+    if (L.wR >= 3) { ctx.shadowColor = RCOL[L.wR]; ctx.shadowBlur = 6 + L.wR * 3 + Math.sin(t * 6) * 3; }
+    drawWeaponFx(ctx, wi, ww, wl, L.wR, t, L.wk); ctx.restore(); }
   ctx.restore();
 }
 function drawFighter(ctx, x, y, sc, L, facing, pose) {
@@ -500,8 +559,8 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   if (!im || !im.complete || !im.naturalWidth) return drawKnight(ctx, x, y, sc, L, facing, pose);
   pose = pose || {};
   const t = pose.t != null ? pose.t : performance.now() / 1000;
-  let H = 150 * sc * (L.boss ? 1.2 : 1) * (L.monster ? 1.05 : 1) * (L.super ? 1.12 : 1), W = H * im.naturalWidth / im.naturalHeight;
-  if (pose.maxW && W > pose.maxW) { H *= pose.maxW / W; W = pose.maxW; } // con quá bè thì thu lại cho vừa khung
+  let H = 150 * sc * (L.boss ? 1.2 : 1) * (L.monster ? 1.05 : 1) * (L.super ? 1.12 : 1) * (L.giant ? 1.25 : 1), W = H * im.naturalWidth / im.naturalHeight;
+  if (pose.maxW && W > pose.maxW * (L.giant ? 1.45 : 1)) { const mw = pose.maxW * (L.giant ? 1.45 : 1); H *= mw / W; W = mw; } // con quá bè thì thu lại cho vừa khung
   const dead = pose.dead || 0;
   ctx.save();
   ctx.translate(x, y);
@@ -569,7 +628,7 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   if (useLayer) {
     // khiên (tay trước)
     if (L.sh && ready(L.sh)) {
-      const si = SPR[L.sh], sh = H * (fine ? 0.3 : 0.36), sw = sh * si.naturalWidth / si.naturalHeight;
+      const si = SPR[L.sh], sh = H * (fine ? 0.4 : 0.46), sw = sh * si.naturalWidth / si.naturalHeight;
       const hx = -W / 2 + W * (ANCH[bodyId] ? A.off[0] + 0.06 : HAND.shield.x), hy = -H + H * (ANCH[bodyId] ? A.off[1] : HAND.shield.y);
       if (L.sR >= 3) { ctx.shadowColor = RCOL[L.sR]; ctx.shadowBlur = 8 + L.sR * 2; }
       ctx.drawImage(si, hx - sw / 2, hy - sh / 2, sw, sh); ctx.shadowBlur = 0;
@@ -581,8 +640,8 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
       const hx = -W / 2 + W * (ANCH[bodyId] ? A.hand[0] - 0.04 : HAND.def.x), hy = -H + H * (ANCH[bodyId] ? A.hand[1] : HAND.def.y);
       const ang = arm < 0.6 ? 0.25 + (arm - 0.6) / 2.7 * 2.3 : 0.25 + (arm - 0.6) / 0.7 * 1.45;
       ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang);
-      if (L.wR >= 2) { ctx.shadowColor = RCOL[L.wR]; ctx.shadowBlur = 6 + L.wR * 3 + Math.sin(t * 6) * 3; }
-      ctx.drawImage(wi, -ww / 2, -wl * 0.86, ww, wl);
+      if (L.wR >= 3) { ctx.shadowColor = RCOL[L.wR]; ctx.shadowBlur = 6 + L.wR * 3 + Math.sin(t * 6) * 3; }
+      drawWeaponFx(ctx, wi, ww, wl, L.wR, t, L.wk);
       ctx.restore();
     }
   }
@@ -672,7 +731,7 @@ function drawKnight(ctx, x, y, sc, L, facing, pose) {
 }
 function drawWeapon(ctx, x, y, L) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(-0.18);
-  const c = L.weaponC, glow = L.weaponR >= 2;
+  const c = L.weaponC, glow = L.weaponR >= 3;
   if (glow) { ctx.shadowColor = L.weaponR === 3 ? '#ff9a1f' : '#b45cff'; ctx.shadowBlur = 14; }
   ctx.lineWidth = 3; ctx.strokeStyle = '#1a1020';
   switch (L.weapon) {
@@ -779,7 +838,7 @@ function cardHTML(it, tag) {
   const s = itemStats(it), m = mainStat(it), pk = PERKS[it.perk];
   let extra = ''; if (s.block) extra += ` · 🛡 Đỡ ${s.block}%`; if (s.speed) extra += ` · 💨 Tốc +${s.speed}%`;
   return `<div class="card" style="border-left-color:${RCOL[it.rar]}">${tag ? `<span class="tag">${tag}</span>` : ''}
-    <div class="icon bg${it.rar}">${itemIconHTML(it)}</div>
+    <div class="icon bg${it.rar} glowr r${it.rar}">${itemIconHTML(it)}</div>
     <div class="info"><div class="rr t${it.rar}">${RAR[it.rar].n} · Cấp ${it.ilvl}${it.up ? ' · +' + it.up : ''}</div>
     <div class="t">${itemName(it)}</div>
     <div class="st">${m.ic} ${fmt(m.v)}<small style="font-weight:400;color:#b8a9da">${extra}</small></div>
@@ -988,7 +1047,7 @@ function battleLoop(now) {
   if (B.skip) { B.A.x = B.A.homeX; B.O.x = B.O.homeX; B.A.walk = B.O.walk = 0; B.q = null; B.A.arm = B.O.arm = 0.6; B.A.lunge = B.O.lunge = 0; while (!B.over) simStep(); B.skip = false; }
   else update(dt);
   drawBattle(now);
-  if (B.phase === 'done') { const b = B; B = null; setTimeout(() => { $('battle').classList.add('hidden'); b.onEnd(b.winner === b.A, b.A.hp); }, 50); return; }
+  if (B.phase === 'done') { const b = B; B = null; setTimeout(() => { $('battle').classList.add('hidden'); b.onEnd(b.winner === b.A, b.A.hp, b); }, 50); return; }
   requestAnimationFrame(battleLoop);
 }
 // Chạy nhanh để bỏ qua: xử lý logic không cần hoạt ảnh
@@ -998,6 +1057,7 @@ function simStep() {
   B.t = actor.next;
   doAction(actor, tgt, true);
   if (tgt.hp <= 0 || actor.hp <= 0) finish(tgt.hp <= 0 ? actor : tgt);
+  else if (B.limit && B.t >= B.limit) { B.timeUp = true; finish(A); } // trận đánh boss có giới hạn thời gian
 }
 function update(dt) {
   const { A, O } = B;
@@ -1020,6 +1080,7 @@ function update(dt) {
     return;
   }
   if (B.phase === 'fight') {
+    if (B.limit && B.t >= B.limit && !B.q) { B.timeUp = true; finish(A); return; }
     if (!B.q) {
       const actor = A.next <= O.next ? A : O;
       if (B.t >= actor.next) B.q = { actor, tgt: actor === A ? O : A, t: 0, dur: 620, hit: false };

@@ -112,7 +112,7 @@ function zoneAnim(x, id, t, st) {
         x.fillStyle = gr; x.fillRect(cx - 130, 400, 260, 240);
       }
       x.globalCompositeOperation = 'source-over';
-      for (let k = 0; k < 2; k++) { // dòng dung nham uốn lượn, cuộn sóng
+      if (!st.img) for (let k = 0; k < 2; k++) { // dòng dung nham uốn lượn, cuộn sóng (ảnh nền AI đã có dung nham thì bỏ)
         const y0 = 560 + k * 46; x.beginPath(); x.moveTo(0, y0);
         for (let px = 0; px <= 360; px += 12) x.lineTo(px, y0 + Math.sin(px * 0.04 + t * 1.6 + k) * 6);
         x.lineTo(360, y0 + 22); for (let px = 360; px >= 0; px -= 12) x.lineTo(px, y0 + 22 + Math.sin(px * 0.05 - t * 1.3 + k) * 5); x.closePath();
@@ -123,7 +123,7 @@ function zoneAnim(x, id, t, st) {
       spawn(26, () => ({ k: 'smoke', x: 170 + Math.random() * 20, y: 196, vx: (Math.random() - 0.3) * 0.25, vy: -0.3 - Math.random() * 0.3, r: 8 + Math.random() * 10, a: 0, life: Math.random() }));
       spawn(60, () => ({ k: 'ember', x: Math.random() * 360, y: 470 + Math.random() * 170, vx: (Math.random() - 0.5) * 0.4, vy: -0.6 - Math.random() * 0.9, r: 1 + Math.random() * 2, life: Math.random() }));
       // vòi dung nham phun định kỳ
-      const er = (t % 6) / 6; if (er < 0.25) { x.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const a = -Math.PI / 2 + (i - 7) * 0.09, d = er * 4 * 120 * (0.6 + (i % 3) * 0.2); x.fillStyle = 'rgba(255,140,30,.8)'; x.beginPath(); x.arc(180 + Math.cos(a) * d, 196 + Math.sin(a) * d + er * er * 600, 3, 0, Math.PI * 2); x.fill(); } x.globalCompositeOperation = 'source-over'; }
+      const er = (t % 6) / 6; if (er < 0.25 && !st.img) { x.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const a = -Math.PI / 2 + (i - 7) * 0.09, d = er * 4 * 120 * (0.6 + (i % 3) * 0.2); x.fillStyle = 'rgba(255,140,30,.8)'; x.beginPath(); x.arc(180 + Math.cos(a) * d, 196 + Math.sin(a) * d + er * er * 600, 3, 0, Math.PI * 2); x.fill(); } x.globalCompositeOperation = 'source-over'; }
       break;
     }
     case 'rung':
@@ -147,7 +147,7 @@ function zoneAnim(x, id, t, st) {
       spawn(80, () => ({ k: 'snow', x: Math.random() * 360, y: Math.random() * -640, vx: -0.3 + Math.random() * 0.2, vy: 0.6 + Math.random() * 1.2, r: 1 + Math.random() * 2.4, ph: Math.random() * 6 }));
       break;
     case 'bien':
-      for (let k = 0; k < 4; k++) { x.fillStyle = `rgba(${170 + k * 20},${225 + k * 8},255,${0.35 - k * 0.06})`; x.beginPath(); x.moveTo(0, 340 + k * 26); for (let px = 0; px <= 360; px += 10) x.lineTo(px, 340 + k * 26 + Math.sin(px * 0.05 + t * (1.2 + k * 0.3) + k) * 4); x.lineTo(360, 360 + k * 26); x.lineTo(0, 360 + k * 26); x.fill(); }
+      if (!st.img) for (let k = 0; k < 4; k++) { x.fillStyle = `rgba(${170 + k * 20},${225 + k * 8},255,${0.35 - k * 0.06})`; x.beginPath(); x.moveTo(0, 340 + k * 26); for (let px = 0; px <= 360; px += 10) x.lineTo(px, 340 + k * 26 + Math.sin(px * 0.05 + t * (1.2 + k * 0.3) + k) * 4); x.lineTo(360, 360 + k * 26); x.lineTo(0, 360 + k * 26); x.fill(); }
       x.globalCompositeOperation = 'lighter'; x.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 18; i++) { const px = (i * 41 + Math.sin(t + i) * 10) % 360, py = 340 + (i * 23) % 100; if (Math.sin(t * 3 + i * 2) > 0.7) x.fillRect(px, py, 3, 1.5); }
       break;
     case 'bao': {
@@ -244,9 +244,17 @@ function vnFlag(x, fx, fy, w, h, t, alpha) {
   x.closePath(); x.fill(); x.restore();
 }
 // Vẽ cảnh: lớp tĩnh (lệch nhẹ theo thời gian tạo chiều sâu) + chuyển động
+const ZBG = {};
+function zoneBg(id) { if (id === 'dau-truong') return null; if (!(id in ZBG)) { const im = new Image(); im.src = `bg-${id}.webp`; ZBG[id] = im; } const im = ZBG[id]; return im.complete && im.naturalWidth ? im : null; }
 function drawZone(x, id, t, st, dpr) {
-  const S = zoneStatic(id, dpr);
-  const sway = Math.sin(t * 0.25) * 3;
-  x.drawImage(S, 0, 0, S.width, S.height, -4 + sway * 0.3, 0, 368, 640);
+  const sway = Math.sin(t * 0.25) * 3, bg = zoneBg(id);
+  st.img = !!bg;
+  if (bg) { // ảnh nền vẽ bằng AI (Gemini) làm lớp đáy, hiệu ứng động phủ lên trên
+    const h = 368 / bg.naturalWidth * bg.naturalHeight, y0 = 640 - h - 10, bx0 = -4 + sway * 0.3, iw = bg.naturalWidth, ih = bg.naturalHeight;
+    x.drawImage(bg, 0, 0, iw, 4, bx0, y0 - 400, 368, 402); // kéo dải trên cùng lên che phần trời màn hình dài
+    x.drawImage(bg, 0, ih - 4, iw, 4, bx0, y0 + h - 2, 368, 400); // kéo dải đáy xuống
+    x.drawImage(bg, bx0, y0, 368, h);
+    const g = x.createLinearGradient(0, 430, 0, 640); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)'); x.fillStyle = g; x.fillRect(-10, 430, 380, 230);
+  } else { const S = zoneStatic(id, dpr); x.drawImage(S, 0, 0, S.width, S.height, -4 + sway * 0.3, 0, 368, 640); }
   zoneAnim(x, id, t, st);
 }
