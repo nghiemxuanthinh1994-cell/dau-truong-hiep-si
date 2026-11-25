@@ -263,10 +263,13 @@ let uidN = Date.now();
 const uid = () => (uidN++).toString(36);
 
 // ================== VẬT PHẨM ==================
+// Kỹ năng ẩn chỉ có ở đồ từ Sử Thi (tím) trở lên; đồ thấp hơn (kể cả đồ cũ trong túi) không kích hoạt kỹ năng
+const PERK_MIN_RAR = 3;
+const hasPerk = (it) => !!(it && it.perk && PERKS[it.perk] && it.rar >= PERK_MIN_RAR);
 function makeItem(slot, ilvl, rar, setId) {
   const it = { id: uid(), slot, ilvl: Math.max(1, ilvl), rar, up: 0 };
   if (slot === 'weapon') it.wk = pick(WEAPONS.filter(w => !['scythe', 'trident', 'staff'].includes(w.k) || rar >= 4)).k;
-  it.perk = pick(PERK_BY_SLOT[slot]);
+  it.perk = rar >= PERK_MIN_RAR ? pick(PERK_BY_SLOT[slot]) : null;
   it.mat = pick(MAT[rar]);
   if (rar >= R_MYTH) {
     const st = setOf(setId) || pick(rar === R_SUPER ? SUPER_SETS : MYTH_SETS); it.set = st.id; it.perk = st.perk; it.mat = st.n;
@@ -418,7 +421,7 @@ function lookFromMonster(m) {
   return { spr: m.id, glow: ELEM[m.e].c, boss: !!m.boss, elem: m.e, monster: true, faceL: !!m.faceL, giant: !!m.giant, rank: m.rank != null ? m.rank : (m.giant ? 3 : m.boss ? 2 : 0) };
 }
 const lookOf = (f) => f.mon ? lookFromMonster(f.mon) : lookFromGear(f.gear, f.banner, f.boss, f.outfit);
-const elemOf = (f) => { if (f.mon) return f.mon.e; const sb = setBonus(f.gear); if (sb) return sb.set.e; return f.gear.weapon ? PERK_ELEM[f.gear.weapon.perk] : 'vo'; };
+const elemOf = (f) => { if (f.mon) return f.mon.e; const sb = setBonus(f.gear); if (sb) return sb.set.e; return hasPerk(f.gear.weapon) ? PERK_ELEM[f.gear.weapon.perk] : 'vo'; };
 
 /* Vẽ nhân vật bằng ảnh 3D (có hào quang phát sáng). Không có ảnh thì quay về hình vẽ khối.
    pose: {arm (pha vung đòn), dead 0..1, walk, flash 0..1, t (giây)} */
@@ -1014,12 +1017,12 @@ function cardHTML(it, tag) {
     <div class="info"><div class="rr t${it.rar}">${RAR[it.rar].n} · Cấp ${it.ilvl}${it.up ? ' · +' + it.up : ''}</div>
     <div class="t">${itemName(it)}</div>
     <div class="st">${m.ic} ${fmt(m.v)}<small style="font-weight:400;color:#b8a9da">${extra}</small></div>
-    <div class="pk" style="color:${pk.c}">✦ ${pk.n} · ${perkChance(it)}%</div></div></div>`;
+    ${hasPerk(it) ? `<div class="pk" style="color:${pk.c}">✦ ${pk.n} · ${perkChance(it)}%</div>` : `<div class="pk" style="color:#7d7398">Không có kỹ năng ẩn</div>`}</div></div>`;
 }
 function itemDetail(it, equipped) {
   const pk = PERKS[it.perk], cost = upCost(it), maxed = it.up >= MAX_UP[it.rar];
   modal(`<h3>${itemName(it)}</h3>${cardHTML(it, equipped ? 'Đang mặc' : '')}
-    <p style="font-size:13px;color:#ddd">✦ <b style="color:${pk.c}">${pk.n}</b>: ${pk.d}. Tỉ lệ kích hoạt mỗi đòn: <b>${perkChance(it)}%</b>.</p>
+    ${hasPerk(it) ? `<p style="font-size:13px;color:#ddd">✦ <b style="color:${pk.c}">${pk.n}</b>: ${pk.d}. Tỉ lệ kích hoạt mỗi đòn: <b>${perkChance(it)}%</b>.</p>` : `<p style="font-size:13px;color:#a89cc8">Món này chưa có kỹ năng ẩn. Chỉ đồ <b style="color:${RCOL[PERK_MIN_RAR]}">${RAR[PERK_MIN_RAR].n}</b> trở lên mới có kỹ năng ẩn.</p>`}
     <p style="font-size:12px;color:#b8a9da;margin-top:6px">Cường hóa: +10% chỉ số mỗi cấp, +1% tỉ lệ chiêu mỗi 2 cấp. Tối đa +${MAX_UP[it.rar]} (${RAR[it.rar].n}).</p>
     <div class="btns"><button class="btn" id="bClose">Đóng</button>
     <button class="btn green" id="bUp" ${maxed || S.gold < cost ? 'disabled' : ''}>${maxed ? 'Đã tối đa' : `Cường hóa 🪙${fmt(cost)}`}</button></div>`, root => {
@@ -1187,7 +1190,7 @@ $('btnSkip').onclick = () => { if (B && !B.over) B.skip = true; };
 function mkFighter(f, side, hpStart) {
   const perks = [];
   if (f.mon) f.mon.sk.forEach(([k, ch]) => perks.push({ k, ch }));
-  else for (const s of SLOTS) { const it = f.gear[s.id]; if (it) perks.push({ k: it.perk, ch: perkChance(it) }); }
+  else for (const s of SLOTS) { const it = f.gear[s.id]; if (hasPerk(it)) perks.push({ k: it.perk, ch: perkChance(it) }); }
   const st = f.stats;
   return {
     name: f.name, side, look: lookOf(f), elem: elemOf(f), passive: f.mon ? f.mon.ps : null, revived: false, swoosh: 0, swC: '#fff', maxHp: st.hp, hp: hpStart != null ? Math.min(hpStart, st.hp) : st.hp,
@@ -1420,7 +1423,7 @@ function drawBattle(now) {
   for (const f of [A, O]) {
     const dir = f.side < 0 ? 1 : -1;
     const dx = f.lunge * 42 * dir - dir * (f.kb || 0) * 14; // lao tới + giật lùi khi trúng
-    const fsc = 1.32 * Math.pow(BH / 640, 0.7); // máy càng dài, nhân vật càng to
+    const fsc = 1.18 * Math.pow(BH / 640, 0.7); // máy càng dài, nhân vật càng to (nhỏ lại ~10% theo yêu cầu)
     const hx = f.side < 0 ? 80 : 280, fitW = 2 * Math.min(hx, 360 - hx) + 36, fitH = ground + Math.round((BH - 640) * 0.62) - 130;
     drawFighter(ctx, f.x + dx, ground, fsc, f.look, dir, { key: 'b' + f.side, t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk, flash: f.flash, maxW: 170, fitW, fitH });
     if (f.swoosh > 0) drawSwoosh(ctx, f, dx, ground);
@@ -1663,7 +1666,7 @@ function tutorial() {
   S.tutorial = false; save();
   modal(`<h3>⚔ Chào mừng tới Đấu Trường Hiệp Sĩ!</h3>
     <p style="font-size:14px;line-height:1.5">• Trận đấu diễn ra <b>tự động</b>: sức mạnh nằm ở <b>trang bị</b> bạn mặc.<br>
-    • Mỗi món đồ có <b>chiêu đặc biệt</b> (Chém Lửa, Sấm Sét, Hồi Phục…) kèm tỉ lệ kích hoạt.<br>
+    • Đồ <b>Sử Thi (tím)</b> trở lên có <b>kỹ năng ẩn</b> (Chém Lửa, Sấm Sét, Hồi Phục…) kèm tỉ lệ kích hoạt.<br>
     • Thắng trận → nhận <b>rương</b> → so sánh và thay đồ mạnh hơn → leo hạng.<br>
     • Dùng vàng để <b>cường hóa</b>, thử sức ở Chiến Dịch, Hầm Ngục và Giải Vô Địch.<br>
     • 7 cấp đồ: Thường → Tinh Luyện → Hiếm → Sử Thi → Huyền Thoại → Truyền Thuyết → <b style="color:#ff3d6e">Thần Thoại</b>, và cực hiếm <b style="color:#ffd700">Siêu Thần</b>.<br>

@@ -160,7 +160,7 @@ drawBattle = function (now) {
   ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.translate(0, Math.round((BH - 640) * 0.62));
   const fsc = Math.pow(BH / 640, 0.7);
   if (A.pet && !A.dead) {
-    const px = A.x - 38 * fsc + A.lunge * 20, py = 470 - 215 * fsc; // bay ngang vai → đầu
+    const px = A.x - 38 * fsc + A.lunge * 20, py = 470 - 194 * fsc; // bay ngang vai → đầu (theo cỡ nhân vật mới)
     drawPet(ctx, px, py, 28 * fsc * (1 + Math.min(A.pet.r, 4) * 0.07), A.pet, t, 1);
     for (const s of (B.petShots || [])) {
       s.t += 16; const k = Math.min(1, s.t / 320), tx = B.O.x, ty = 470 - 110 * fsc;
