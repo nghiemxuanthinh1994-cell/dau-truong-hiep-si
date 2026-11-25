@@ -270,3 +270,13 @@ input.name{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line
 .modal-box{position:relative}
 .x-close{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;border:1px solid #6a5aa0;background:#2a2048;color:#fff;font-size:16px;line-height:1;z-index:5;box-shadow:0 2px 0 #120d22}
 .back-home{display:inline-flex;align-items:center;gap:4px;margin:0 0 6px;padding:6px 12px;border-radius:18px;border:1px solid #6a5aa0;background:linear-gradient(#41336f,#2a2048);color:#fff;font-size:13px;font-weight:700;box-shadow:0 2px 0 #120d22}
+/* Cài đặt */
+#topbar .res{display:flex;align-items:center;gap:8px}
+.gear-btn{width:30px;height:30px;border-radius:50%;border:1px solid #6a5aa0;background:#2a2048;color:#fff;font-size:16px;line-height:1;padding:0}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;font-size:14px}
+.set-row .name{flex:1;max-width:60%}
+.toggle{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:20px;border:1px solid #6a5aa0;background:#2a2048;color:#fff;font-weight:700}
+.toggle i{width:34px;height:20px;border-radius:10px;background:#555;position:relative;transition:.2s}
+.toggle i::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
+.toggle.on i{background:#3fc66a}.toggle.on i::after{left:16px}
+.copyright{text-align:center;font-size:11px;color:#a89cc8;margin:14px 0 4px;line-height:1.5}

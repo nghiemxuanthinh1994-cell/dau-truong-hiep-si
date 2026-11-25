@@ -369,6 +369,7 @@ function avgIlvl() { let s = 0, n = 0; for (const k in S.gear) if (S.gear[k]) { 
 // ================== ÂM THANH ==================
 let AC = null;
 function sfx(type) {
+  if (S && S.muted) return; // tắt âm thanh trong Cài đặt
   try {
     if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
     const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();

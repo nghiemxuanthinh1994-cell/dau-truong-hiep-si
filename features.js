@@ -434,5 +434,46 @@ function lbModal(tab) {
   // Biểu tượng vẽ 3D cho các mục ở Đấu Trường (ui-*.webp); chưa có ảnh thì giữ emoji
   const UI_IC = { btnDungeon: 'ham-nguc', btnCampaign: 'chien-dich', btnChamp: 'giai', btnRanked: 'dau-hang', btnBoss: 'boss', btnLb: 'xep-hang', btnFarm: 'ai-boss', btnPet: 'thu-linh' };
   for (const id in UI_IC) { const el = $(id) && $(id).querySelector('.ic'); if (!el) continue; const im = new Image(); im.className = 'ic-img'; im.alt = ''; im.onload = () => { el.textContent = ''; el.appendChild(im); }; im.src = `ui-${UI_IC[id]}.webp`; }
+  // ⚙ Cài đặt: đổi tên, bật/tắt âm thanh, xóa dữ liệu chơi lại, bản quyền
+  const res = document.querySelector('#topbar .res'); const gs = document.createElement('button'); gs.id = 'btnSettings'; gs.className = 'gear-btn'; gs.setAttribute('aria-label', 'Cài đặt'); gs.textContent = '⚙'; res.appendChild(gs);
+  gs.onclick = () => { sfx('tap'); settingsModal(); };
   render();
 })();
+// Mã quà tặng: mỗi mã dùng 1 lần (lưu trong S.codes). Thêm mã mới vào bảng này.
+const GIFT_CODES = {
+  HIEPSI2026: { gems: 500, gold: 5000, n: 'Quà ra mắt' },
+  TANTHU: { gold: 3000, chests: ['silver', 'silver'], n: 'Quà tân thủ' },
+  VIETNAM: { gems: 300, eggs: 1, n: 'Quà Việt Nam' },
+  THULINH: { eggs: 2, stone: 100, n: 'Quà thú linh' },
+  DAUTRUONG: { chests: ['gold'], gems: 150, n: 'Quà đấu trường' },
+};
+function redeemCode(code) {
+  ensureFeat(); S.codes = S.codes || [];
+  if (!code) return toast('Hãy nhập mã');
+  const g = GIFT_CODES[code]; if (!g) { sfx('lose'); return toast('Mã không đúng'); }
+  if (S.codes.includes(code)) return toast('Mã này bạn đã dùng rồi');
+  S.codes.push(code); S.gems += g.gems || 0; S.gold += g.gold || 0; S.eggs += g.eggs || 0; S.pstone += g.stone || 0; if (g.chests) queueChests(g.chests.map(type => ({ type }))); save(); render(); sfx('win');
+  const parts = [g.gold && `🪙 +${fmt(g.gold)}`, g.gems && `💎 +${g.gems}`, g.eggs && `🥚 +${g.eggs}`, g.stone && `💠 +${g.stone}`, g.chests && g.chests.map(c => CHESTS[c].n).join(', ')].filter(Boolean);
+  resultModal(`<h3>🎁 ${g.n}</h3><div class="reward-line">${parts.map(p => `<span>${p}</span>`).join('')}</div>`);
+}
+function settingsModal() {
+  modal(`<h3>⚙ Cài đặt</h3>
+    <label class="set-row"><span>Tên hiệp sĩ</span><input class="name" id="sName" maxlength="14" value="${S.name.replace(/"/g, '')}"></label>
+    <div class="btns" style="margin-top:4px"><button class="btn ok" id="sSaveName">Đổi tên</button></div>
+    <div class="set-row"><span>Nhập code</span><input class="name" id="sCode" maxlength="24" placeholder="Nhập mã quà tặng" style="text-transform:uppercase"></div>
+    <div class="btns" style="margin-top:4px"><button class="btn green" id="sRedeem">Nhận quà</button></div>
+    <div class="set-row"><span>Âm thanh</span><button class="toggle ${S.muted ? '' : 'on'}" id="sSound"><i></i><b>${S.muted ? 'Tắt' : 'Bật'}</b></button></div>
+    <div class="set-row"><span>Dữ liệu</span><button class="btn red" id="sReset">Xóa dữ liệu & chơi lại</button></div>
+    <p class="hint" id="sResetHint" style="display:none;color:#ff8a7a">Toàn bộ trang bị, thú linh, cấp độ sẽ mất và không khôi phục được. Bấm lần nữa để xác nhận.</p>
+    <p class="copyright">Đấu Trường Hiệp Sĩ · phiên bản 2026<br>© 2026 Nghiêm Xuân Thịnh. Bản quyền thuộc về Nghiêm Xuân Thịnh.</p>
+    <div class="btns"><button class="btn" id="sClose">Đóng</button></div>`, root => {
+    bindBtns(root, {
+      '#sClose': closeModal,
+      '#sRedeem': () => { const code = root.querySelector('#sCode').value.trim().toUpperCase().replace(/\s+/g, ''); redeemCode(code); },
+      '#sSaveName': () => { S.name = (root.querySelector('#sName').value.trim() || 'Hiệp Sĩ').slice(0, 14); save(); render(); toast('Đã đổi tên: ' + S.name); },
+      '#sSound': () => { S.muted = !S.muted; save(); if (!S.muted) sfx('tap'); settingsModal(); },
+      '#sReset': () => { const bt = root.querySelector('#sReset'); if (!bt.dataset.ok) { bt.dataset.ok = 1; bt.textContent = 'Bấm lần nữa để xóa hết'; root.querySelector('#sResetHint').style.display = 'block'; return; }
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) { } S = newSave(); ensureFeat(); save(); closeModal(); showTab('home'); render(); toast('Đã xóa dữ liệu, chơi lại từ đầu'); },
+    });
+  });
+}
