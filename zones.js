@@ -258,5 +258,6 @@ function drawZone(x, id, t, st, dpr) {
     x.drawImage(bg, bx0, y0, 368, h);
     const g = x.createLinearGradient(0, 430, 0, 640); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)'); x.fillStyle = g; x.fillRect(-10, 430, 380, 230);
   } else { const S = zoneStatic(id, dpr); x.drawImage(S, 0, 0, S.width, S.height, -4 + sway * 0.3, 0, 368, 640); }
+  if (typeof S !== 'undefined' && S && S.noFx) return; // tắt hiệu ứng động trong Cài đặt: chỉ giữ ảnh nền tĩnh
   zoneAnim(x, id, t, st);
 }

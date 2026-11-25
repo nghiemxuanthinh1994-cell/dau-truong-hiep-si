@@ -524,7 +524,7 @@ function drawWeaponFx0(ctx, wi, ww, wl, rar, t) {
     ctx.drawImage(S2.c, -ww / 2 - pw, -wl * 0.86 - pw, ww + pw * 2, wl + pw * 2); ctx.restore();
   }
   ctx.drawImage(wi, -ww / 2, -wl * 0.86, ww, wl);
-  if (rar < 3) return; // dưới Sử Thi (tím): không hiệu ứng
+  if (rar < 3 || (S && S.noFx)) return; // dưới Sử Thi (tím) hoặc đã tắt hiệu ứng động: không chớp/sét
   const col = RCOL[rar], top = -wl * 0.86, len = wl * 0.8, prof = wProfile(wi), cxAt = (y) => (prof[Math.max(0, Math.min(39, Math.floor((y - top) / wl * 40)))] - 0.5) * ww;
   ctx.save(); ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter';
   // phủ năng lượng nhấp nháy nhẹ lên thân vũ khí
@@ -771,7 +771,7 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   const wid = useLayer ? bodyId : L.spr;
   if (L.monster && L.rank >= 1 && dead < 1) monsterSilGlow(ctx, im, L, W, H, t);
   ctx.drawImage(im, -W / 2, -H, W, H);
-  if (L.monster && L.rank >= 1 && dead < 1) monsterFxFront(ctx, L, W, H, sc, t);
+  if (L.monster && L.rank >= 1 && dead < 1 && !(S && S.noFx)) monsterFxFront(ctx, L, W, H, sc, t);
   ctx.shadowBlur = 0;
   if (pose.flash > 0 && SPR_WHITE[wid]) { ctx.globalAlpha = pose.flash * 0.75; ctx.drawImage(SPR_WHITE[wid], -W / 2, -H, W, H); ctx.globalAlpha = 1 - dead * 0.35; }
   const A = anchorOf(bodyId);

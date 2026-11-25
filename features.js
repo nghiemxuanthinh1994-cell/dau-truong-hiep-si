@@ -463,6 +463,7 @@ function settingsModal() {
     <div class="set-row"><span>Nhập code</span><input class="name" id="sCode" maxlength="24" placeholder="Nhập mã quà tặng" style="text-transform:uppercase"></div>
     <div class="btns" style="margin-top:4px"><button class="btn green" id="sRedeem">Nhận quà</button></div>
     <div class="set-row"><span>Âm thanh</span><button class="toggle ${S.muted ? '' : 'on'}" id="sSound"><i></i><b>${S.muted ? 'Tắt' : 'Bật'}</b></button></div>
+    <div class="set-row"><span>Hiệu ứng động<br><small style="color:#a89cc8">pháo giấy, cờ bay, hạt, tia sét trang trí</small></span><button class="toggle ${S.noFx ? '' : 'on'}" id="sFx"><i></i><b>${S.noFx ? 'Tắt' : 'Bật'}</b></button></div>
     <div class="set-row"><span>Dữ liệu</span><button class="btn red" id="sReset">Xóa dữ liệu & chơi lại</button></div>
     <p class="hint" id="sResetHint" style="display:none;color:#ff8a7a">Toàn bộ trang bị, thú linh, cấp độ sẽ mất và không khôi phục được. Bấm lần nữa để xác nhận.</p>
     <p class="copyright">Đấu Trường Hiệp Sĩ · phiên bản 2026<br>© 2026 Nghiêm Xuân Thịnh. Bản quyền thuộc về Nghiêm Xuân Thịnh.</p>
@@ -471,6 +472,7 @@ function settingsModal() {
       '#sClose': closeModal,
       '#sRedeem': () => { const code = root.querySelector('#sCode').value.trim().toUpperCase().replace(/\s+/g, ''); redeemCode(code); },
       '#sSaveName': () => { S.name = (root.querySelector('#sName').value.trim() || 'Hiệp Sĩ').slice(0, 14); save(); render(); toast('Đã đổi tên: ' + S.name); },
+      '#sFx': () => { S.noFx = !S.noFx; save(); sfx('tap'); toast(S.noFx ? 'Đã tắt hiệu ứng động' : 'Đã bật hiệu ứng động'); settingsModal(); },
       '#sSound': () => { S.muted = !S.muted; save(); if (!S.muted) sfx('tap'); settingsModal(); },
       '#sReset': () => { const bt = root.querySelector('#sReset'); if (!bt.dataset.ok) { bt.dataset.ok = 1; bt.textContent = 'Bấm lần nữa để xóa hết'; root.querySelector('#sResetHint').style.display = 'block'; return; }
         try { localStorage.removeItem(SAVE_KEY); } catch (e) { } S = newSave(); ensureFeat(); save(); closeModal(); showTab('home'); render(); toast('Đã xóa dữ liệu, chơi lại từ đầu'); },
