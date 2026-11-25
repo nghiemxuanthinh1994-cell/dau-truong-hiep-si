@@ -1,8 +1,8 @@
-/* Tính năng mở rộng: cấp nhân vật & kinh nghiệm, Thú Linh (5 hệ × 5 bậc, mở ở cấp 30),
+/* Tính năng mở rộng: cấp nhân vật & kinh nghiệm, Thú Linh (5 hệ × 5 bậc, mở ở cấp 20),
    Boss Hẹn Giờ, Boss Liên Server, Bảng Xếp Hạng. Nạp SAU game.js và chest.js. */
 'use strict';
 // ================== CẤP NHÂN VẬT ==================
-const LV_MAX = 100, PET_UNLOCK_LV = 30;
+const LV_MAX = 100, PET_UNLOCK_LV = 20;
 const xpNeed = (lv) => Math.round(60 * Math.pow(lv, 1.55));
 function ensureFeat() {
   if (!S) return; if (!S.lv) S.lv = 1; if (S.xp == null) S.xp = 0; if (!S.pets) S.pets = []; if (S.eggs == null) S.eggs = 0; if (S.pstone == null) S.pstone = 0; if (!S.pb) S.pb = {};
