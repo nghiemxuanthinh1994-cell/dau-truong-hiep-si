@@ -151,7 +151,7 @@ function zoneAnim(x, id, t, st) {
       x.globalCompositeOperation = 'lighter'; x.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 18; i++) { const px = (i * 41 + Math.sin(t + i) * 10) % 360, py = 340 + (i * 23) % 100; if (Math.sin(t * 3 + i * 2) > 0.7) x.fillRect(px, py, 3, 1.5); }
       break;
     case 'bao': {
-      for (let k = 0; k < 4; k++) { x.globalAlpha = 0.5; x.fillStyle = '#0c0f1c'; x.beginPath(); x.ellipse(((t * (8 + k * 4) + k * 140) % 560) - 100, 60 + k * 35, 150, 36, 0, 0, Math.PI * 2); x.fill(); }
+      if (!st.img) for (let k = 0; k < 4; k++) { x.globalAlpha = 0.5; x.fillStyle = '#0c0f1c'; x.beginPath(); x.ellipse(((t * (8 + k * 4) + k * 140) % 560) - 100, 60 + k * 35, 150, 36, 0, 0, Math.PI * 2); x.fill(); }
       x.globalAlpha = 1;
       const fl = (t % 4.3) / 4.3; if (fl < 0.05 || (fl > 0.08 && fl < 0.11)) { x.fillStyle = 'rgba(220,230,255,.35)'; x.fillRect(0, 0, 360, 640); x.strokeStyle = '#e8f0ff'; x.lineWidth = 3; x.beginPath(); let px = 60 + (Math.floor(t / 4.3) * 97) % 240, py = 0; x.moveTo(px, py); while (py < 360) { py += 40; px += (Math.random() - 0.5) * 40; x.lineTo(px, py); } x.stroke(); }
       spawn(90, () => ({ k: 'rain', x: Math.random() * 400, y: Math.random() * -640, vx: -2, vy: 11 + Math.random() * 4 }));
@@ -182,7 +182,7 @@ function zoneAnim(x, id, t, st) {
           st.crowd.push({ x: px, y, sk: SK[Math.floor(rr() * 4)], sh: SH[Math.floor(rr() * SH.length)], ph: rr() * 6.28, sp: 4 + rr() * 4, arm: rr() < 0.35, flag: rr() < 0.06 });
         }
       }
-      for (const c of st.crowd) {
+      if (!st.img) for (const c of st.crowd) { // ảnh nền AI đã có khán giả thì không vẽ người tí hon
         const hop = Math.max(0, Math.sin(t * c.sp + c.ph)) * 3.5;
         x.fillStyle = c.sh; x.beginPath(); x.ellipse(c.x, c.y + 6 - hop, 5.5, 5, 0, Math.PI, 0); x.fill();
         x.fillStyle = c.sk; x.beginPath(); x.arc(c.x, c.y - 1 - hop, 3.4, 0, Math.PI * 2); x.fill();
@@ -190,17 +190,19 @@ function zoneAnim(x, id, t, st) {
         if (c.flag) vnFlag(x, c.x + 3, c.y - 14 - hop, 12, 8, t * 1.5 + c.ph, 0.6);
       }
       // cờ Việt Nam lớn trên nóc khán đài
-      for (const [fx, fy, w] of [[40, 64, 44], [180, 40, 60], [320, 64, 44]]) {
-        x.fillStyle = '#d8d0c0'; x.fillRect(fx - 1.5, fy, 3, 90);
-        vnFlag(x, fx + 1.5, fy + 2, w, w * 2 / 3, t, 1);
+      // ảnh nền AI: cờ cắm trên cột dọc vành mái khán đài (đặt theo đường mép tường của ảnh); vẽ tay: 3 cờ lớn như cũ
+      const FL = st.img ? [[40, 186, 26, 32], [150, 206, 28, 34], [262, 190, 28, 34], [334, 158, 24, 30]] : [[40, 154, 44, 90], [180, 130, 60, 90], [320, 154, 44, 90]];
+      for (const [fx, fb, w, ph] of FL) { const fy = fb - ph;
+        x.fillStyle = '#cfc6b4'; x.fillRect(fx - 1.2, fy, 2.4, ph); x.fillStyle = '#ffd860'; x.beginPath(); x.arc(fx, fy, 2.2, 0, Math.PI * 2); x.fill();
+        vnFlag(x, fx + 1.2, fy + 1.5, w, w * 2 / 3, t + fx * 0.02, 1);
       }
       // pháo giấy rơi
       spawn(40, () => ({ k: 'confetti', x: Math.random() * 360, y: -Math.random() * 640, vx: (Math.random() - 0.5) * 0.6, vy: 0.8 + Math.random() * 1.2, c: ['#da251d', '#ffde00', '#ffffff'][Math.floor(Math.random() * 3)], ph: Math.random() * 6 }));
       break;
     }
     default: // lâu đài: cờ bay
-      for (let i = 0; i < 3; i++) { const fx = 40 + i * 140, fy = 300 - (i % 2) * 50; x.fillStyle = '#5a3a22'; x.fillRect(fx, fy, 3, 40); x.fillStyle = '#c0392b'; x.beginPath(); x.moveTo(fx + 3, fy); for (let k = 0; k <= 6; k++) x.lineTo(fx + 3 + k * 5, fy + Math.sin(t * 5 + k * 0.8 + i) * 3); x.lineTo(fx + 33, fy + 14); for (let k = 6; k >= 0; k--) x.lineTo(fx + 3 + k * 5, fy + 14 + Math.sin(t * 5 + k * 0.8 + i) * 3); x.fill(); }
-      spawn(10, () => ({ k: 'cloud', x: Math.random() * 400, y: 40 + Math.random() * 120, vx: 0.15 + Math.random() * 0.2, r: 30 + Math.random() * 30 }));
+      if (!st.img) for (let i = 0; i < 3; i++) { const fx = 40 + i * 140, fy = 300 - (i % 2) * 50; x.fillStyle = '#5a3a22'; x.fillRect(fx, fy, 3, 40); x.fillStyle = '#c0392b'; x.beginPath(); x.moveTo(fx + 3, fy); for (let k = 0; k <= 6; k++) x.lineTo(fx + 3 + k * 5, fy + Math.sin(t * 5 + k * 0.8 + i) * 3); x.lineTo(fx + 33, fy + 14); for (let k = 6; k >= 0; k--) x.lineTo(fx + 3 + k * 5, fy + 14 + Math.sin(t * 5 + k * 0.8 + i) * 3); x.fill(); }
+      if (!st.img) spawn(10, () => ({ k: 'cloud', x: Math.random() * 400, y: 40 + Math.random() * 120, vx: 0.15 + Math.random() * 0.2, r: 30 + Math.random() * 30 }));
   }
   // hạt
   for (const p of P) {
@@ -245,7 +247,7 @@ function vnFlag(x, fx, fy, w, h, t, alpha) {
 }
 // Vẽ cảnh: lớp tĩnh (lệch nhẹ theo thời gian tạo chiều sâu) + chuyển động
 const ZBG = {};
-function zoneBg(id) { if (id === 'dau-truong') return null; if (!(id in ZBG)) { const im = new Image(); im.src = `bg-${id}.webp`; ZBG[id] = im; } const im = ZBG[id]; return im.complete && im.naturalWidth ? im : null; }
+function zoneBg(id) { if (!(id in ZBG)) { const im = new Image(); im.src = `bg-${id}.webp`; ZBG[id] = im; } const im = ZBG[id]; return im.complete && im.naturalWidth ? im : null; }
 function drawZone(x, id, t, st, dpr) {
   const sway = Math.sin(t * 0.25) * 3, bg = zoneBg(id);
   st.img = !!bg;

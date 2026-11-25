@@ -109,7 +109,7 @@ openChest = function (type, ilvl) {
       const lid = ot < 0 ? 0 : Math.min(1, ot / 0.35) * (1 + Math.sin(Math.min(1, ot / 0.35) * Math.PI) * 0.15);
       const bob = ot < 0 ? Math.sin(t * 3) * 2 : 0;
       x.save(); x.translate(shake, 0); x.rotate(shake * 0.004);
-      drawChestArt(x, 160, 300 + bob, 1.15, type, lid, t); x.restore();
+      drawChestImg(x, 160, 300 + bob, 1.15, type, lid, t); x.restore();
       if (ot >= 0) {
         // chớp trắng lúc bật nắp
         if (ot < 0.25) { x.fillStyle = `rgba(255,255,255,${(1 - ot / 0.25) * 0.8})`; x.fillRect(0, 0, CW, CH); }
@@ -143,9 +143,21 @@ openChest = function (type, ilvl) {
     requestAnimationFrame(loop);
   });
 };
-// Hình rương vẽ sẵn cho cửa hàng
+// Rương 3D vẽ bằng AI (Gemini): chest-<loại>-0 (đóng), chest-<loại>-1 (mở). Chưa có ảnh thì vẽ bằng mã như cũ.
+const CHEST_IMG = {};
+for (const ty of ['wood', 'silver', 'gold', 'legend', 'myth', 'super']) CHEST_IMG[ty] = [0, 1].map(k => { const im = new Image(); im.src = `chest-${ty}-${k}.webp`; return im; });
+function drawChestImg(x, cx, cy, s, type, lid, t) {
+  const pair = CHEST_IMG[type], im = pair && pair[lid > 0.25 ? 1 : 0];
+  if (!im || !im.complete || !im.naturalWidth) return drawChestArt(x, cx, cy, s, type, lid, t);
+  const h = 150 * s, w = h * im.naturalWidth / im.naturalHeight, pop = lid > 0.25 ? 1 + Math.sin(Math.min(1, lid) * Math.PI) * 0.06 : 1;
+  x.save(); x.translate(cx, cy); x.scale(pop, pop);
+  x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(0, -4, w * 0.42, 10 * s, 0, 0, Math.PI * 2); x.fill(); // bóng đổ
+  x.drawImage(im, -w / 2, -h, w, h); x.restore();
+}
+// Hình rương cho cửa hàng
 const CHEST_THUMBS = {};
 function chestThumb(type) {
+  if (CHEST_IMG[type]) return `chest-${type}-0.webp`;
   if (CHEST_THUMBS[type]) return CHEST_THUMBS[type];
   const c = document.createElement('canvas'); const x = hd(c, 150, 120); drawChestArt(x, 75, 108, 0.7, type, 0, 0.3);
   return (CHEST_THUMBS[type] = c.toDataURL('image/png'));

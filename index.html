@@ -3,9 +3,15 @@
 <head>
 <meta name="theme-color" content="#1b1430">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Đấu Trường Hiệp Sĩ</title>
-<link rel="stylesheet" href="style.css?v=34">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hiệp Sĩ">
+<link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 <div id="app">
@@ -74,11 +80,12 @@
   <div id="modal" class="overlay hidden"><div class="modal-box" id="modalBox"></div></div>
   <div id="toast"></div>
 </div>
-<script src="anchors.js?v=34"></script>
-<script src="lop.js?v=34"></script>
-<script src="zones.js?v=34"></script>
-<script src="game.js?v=34"></script>
-<script src="chest.js?v=34"></script>
-<script src="features.js?v=34"></script>
+<script src="anchors.js?v=51"></script>
+<script src="lop.js?v=51"></script>
+<script src="zones.js?v=51"></script>
+<script src="game.js?v=51"></script>
+<script src="chest.js?v=51"></script>
+<script src="features.js?v=51"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');</script>
 </body>
 </html>

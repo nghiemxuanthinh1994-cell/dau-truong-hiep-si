@@ -263,3 +263,10 @@ input.name{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line
 .pet-cur{display:flex;align-items:center;gap:6px;background:#1d1834;border:1px solid #4a3f70;border-radius:10px;padding:6px;margin:4px 0}
 .pet-cur p{flex:1}.pet-cur .btn{padding:6px 8px;font-size:12px;white-space:nowrap}
 .farm .pbsw{padding:4px 6px;font-size:10px}
+/* iPhone tai thỏ / thanh home khi chạy toàn màn hình như app */
+#topbar{padding-top:max(10px, calc(env(safe-area-inset-top, 0px) + 4px))}
+#tabs{padding-bottom:env(safe-area-inset-bottom, 0px)}
+/* nút quay lại / đóng ở mọi màn và hộp thoại */
+.modal-box{position:relative}
+.x-close{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;border:1px solid #6a5aa0;background:#2a2048;color:#fff;font-size:16px;line-height:1;z-index:5;box-shadow:0 2px 0 #120d22}
+.back-home{display:inline-flex;align-items:center;gap:4px;margin:0 0 6px;padding:6px 12px;border-radius:18px;border:1px solid #6a5aa0;background:linear-gradient(#41336f,#2a2048);color:#fff;font-size:13px;font-weight:700;box-shadow:0 2px 0 #120d22}
