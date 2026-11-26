@@ -53,12 +53,12 @@ const ALL_SETS = [...MYTH_SETS, ...SUPER_SETS];
 const setOf = (id) => ALL_SETS.find(x => x.id === id);
 const MAT = [['Sắt', 'Gỗ Sồi', 'Da Thô'], ['Thép Rèn', 'Xích Bạc', 'Đồng Luyện'], ['Thép Xanh', 'Bạc', 'Đồng Đỏ'], ['Long Lân', 'Hắc Thiết', 'Băng Tinh'], ['Thần Hỏa', 'Thiên Lôi', 'Bất Diệt'], ['Tinh Thể Cổ', 'Bạch Kim Rune', 'Thiên Thạch'], ['Thần Thoại'], ['Siêu Thần']];
 const PERKS = {
-  fire:   { n: 'Chém Lửa',     c: '#ff7a1a', d: 'Gây 180% sát thương và thiêu đốt 3 lượt' },
+  fire:   { n: 'Chém Lửa',     c: '#ff7a1a', d: '180% sát thương, thiêu đốt 3 lượt: mỗi lượt 100% công, cộng dồn tối đa 300%' },
   whirl:  { n: 'Lốc Xoáy',     c: '#e0e0ff', d: 'Xoay 3 đòn liên tiếp, mỗi đòn 70%' },
   ice:    { n: 'Băng Giá',     c: '#6fe3ff', d: '130% sát thương, làm chậm đối thủ' },
   thunder:{ n: 'Sấm Sét',      c: '#ffe14a', d: '150% sát thương, choáng 1 lượt' },
   leech:  { n: 'Huyết Kiếm',   c: '#ff4a6a', d: '140% sát thương, hồi máu 50% lượng gây ra' },
-  heal:   { n: 'Hồi Phục',     c: '#5dff8a', d: 'Đánh thường và hồi 18% máu tối đa' },
+  heal:   { n: 'Hồi Phục',     c: '#5dff8a', d: 'Đánh thường và hồi máu 100% công, cộng dồn mỗi lần tới tối đa 300% công' },
   guard:  { n: 'Khiên Thép',   c: '#c8d6e5', d: 'Chặn hoàn toàn đòn đánh kế tiếp' },
   poison: { n: 'Độc Tiễn',     c: '#9cff3a', d: 'Gây độc 4 lượt' },
 };
@@ -119,7 +119,7 @@ const PASSIVES = {
   rage:   { n: 'Cuồng Nộ',    d: 'Dưới 40% máu: công +50%' },
   dodge:  { n: 'Né Gió',      d: '18% né hoàn toàn đòn đánh' },
   pierce: { n: 'Xuyên Giáp',  d: 'Đòn đánh bỏ qua đỡ đòn' },
-  regen:  { n: 'Tái Sinh',    d: 'Mỗi lượt hồi 5% máu' },
+  regen:  { n: 'Tái Sinh',    d: 'Mỗi lượt hồi máu bằng 30% công' },
   thorns: { n: 'Gai Đá',      d: 'Phản 25% sát thương nhận vào' },
 };
 // Danh sách quái: ảnh trong <id>.webp
@@ -1311,12 +1311,12 @@ function burst(f, c, n, kind) {
 function doAction(actor, tgt, fast) {
   const vis = !fast;
   // Hiệu ứng duy trì đầu lượt
-  if (actor.burn > 0) { const d = Math.round(tgt.atk * 0.35 + actor.maxHp * 0.02); actor.hp -= d; actor.burn--; if (vis) { addText(actor, '-' + d, '#ff7a1a'); burst(actor, '#ff7a1a', 8); } }
-  if (actor.poison > 0) { const d = Math.round(tgt.atk * 0.25 + actor.maxHp * 0.015); actor.hp -= d; actor.poison--; if (vis) { addText(actor, '-' + d, '#9cff3a'); burst(actor, '#9cff3a', 6); } }
+  if (actor.burn > 0) { const d = Math.round((actor.burnAtk || tgt.atk) * (actor.burnStk || 1)); actor.hp -= d; actor.burn--; if (vis) { addText(actor, '-' + d, '#ff7a1a'); burst(actor, '#ff7a1a', 8); } }
+  if (actor.poison > 0) { const d = Math.round(tgt.atk * 0.6); actor.hp -= d; actor.poison--; if (vis) { addText(actor, '-' + d, '#9cff3a'); burst(actor, '#9cff3a', 6); } }
   actor.next += actor.interval;
   tryRevive(actor, vis);
   if (actor.hp <= 0) return;
-  if (actor.passive === 'regen' && actor.hp < actor.maxHp) { const h = Math.round(actor.maxHp * 0.05); actor.hp = Math.min(actor.maxHp, actor.hp + h); if (vis) { addText(actor, '+' + h, '#5dff8a'); burst(actor, '#5dff8a', 5, 'heal'); } }
+  if (actor.passive === 'regen' && actor.hp < actor.maxHp) { const h = Math.round(actor.atk * 0.3); actor.hp = Math.min(actor.maxHp, actor.hp + h); if (vis) { addText(actor, '+' + h, '#5dff8a'); burst(actor, '#5dff8a', 5, 'heal'); } }
   if (actor.stun) { actor.stun = false; actor.stunFx = performance.now() + 900; if (vis) addText(actor, 'CHOÁNG! Mất lượt', '#ffe14a', true); return; } // choáng: mất 1 lượt, sao vẫn xoay thêm chút
 
   actor.swC = ELEM[actor.elem || 'vo'].c;
@@ -1334,7 +1334,7 @@ function doAction(actor, tgt, fast) {
     actor.swC = PERKS[perk].c;
     if (perk === 'fire') mult = 1.8; if (perk === 'ice') mult = 1.3; if (perk === 'thunder') mult = 1.5; if (perk === 'leech') mult = 1.4;
     if (perk === 'whirl') { hits = 3; mult = 0.7; }
-    if (perk === 'heal') { const h = Math.round(actor.maxHp * 0.18); actor.hp = Math.min(actor.maxHp, actor.hp + h); if (vis) { addText(actor, '+' + h, '#5dff8a', true); burst(actor, '#5dff8a', 14, 'heal'); } }
+    if (perk === 'heal') { actor.healStk = Math.min(3, (actor.healStk || 0) + 1); const h = Math.round(actor.atk * actor.healStk); actor.hp = Math.min(actor.maxHp, actor.hp + h); if (vis) { addText(actor, '+' + h, '#5dff8a', true); burst(actor, '#5dff8a', 14, 'heal'); } }
     if (perk === 'guard') { actor.guard = true; if (vis) addText(actor, 'Khiên!', '#c8d6e5'); }
   }
   let total = 0;
@@ -1360,7 +1360,7 @@ function doAction(actor, tgt, fast) {
       }, h * 140);
     }
   }
-  if (perk === 'fire') tgt.burn = 3;
+  if (perk === 'fire') { tgt.burnStk = tgt.burn > 0 ? Math.min(3, (tgt.burnStk || 1) + 1) : 1; tgt.burnAtk = actor.atk; tgt.burn = 3; }
   if (perk === 'poison') tgt.poison = 4;
   if (perk === 'ice') tgt.next += tgt.interval * 0.6;
   if (perk === 'thunder') tgt.stun = true;

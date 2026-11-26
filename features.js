@@ -144,8 +144,8 @@ doAction = function (actor, tgt, fast) {
   const hit = () => {
     if (!B) return; tgt.hp -= dmg;
     if (p.e === 'hoa') tgt.burn = Math.max(tgt.burn, 2); if (p.e === 'bang') tgt.next += tgt.interval * 0.35; if (p.e === 'loi' && Math.random() < 0.3) tgt.stun = true;
-    if (p.sp === 'sieu-than') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(actor.maxHp * 0.06)); if (p.sp === 'dia-nguc') tgt.burn = Math.max(tgt.burn, 3);
-    if (p.e === 'moc') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(actor.maxHp * 0.04)); if (p.e === 'am') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(dmg * 0.3));
+    if (p.sp === 'sieu-than') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(actor.atk * 0.6)); if (p.sp === 'dia-nguc') tgt.burn = Math.max(tgt.burn, 3);
+    if (p.e === 'moc') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(actor.atk * 0.4)); if (p.e === 'am') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(dmg * 0.3));
     tryRevive(tgt, !fast);
     if (!fast) { addText(tgt, (p.sp ? '✦ ' : em > 1 ? 'KHẮC HỆ ' : '') + '-' + dmg, PC, em > 1 || !!p.sp); burst(tgt, PC, p.sp ? 30 : 14); tgt.flash = 0.7; }
   };
@@ -575,6 +575,10 @@ function wingModal() {
 }
 // nút Cánh ở màn Trang bị + thưởng hộp cánh khi lên cấp 10, 20, 30…
 (function hookWings() {
+  // nút Cánh ở màn Đấu Trường (cạnh Thú Linh)
+  const hb = document.createElement('button'); hb.className = 'mode sm'; hb.id = 'btnWing'; hb.innerHTML = '<span class="ic">🪽</span><b>Cánh</b><small id="wingInfo"></small>';
+  const pb = $('btnPet'); if (pb) { pb.parentNode.insertBefore(hb, pb.nextSibling); hb.onclick = () => { sfx('tap'); wingModal(); }; }
+  const _rW = render; render = function () { _rW(); const wi = $('wingInfo'); if (wi && S) { const w = curWing(); wi.textContent = (S.lv || 1) < WING_UNLOCK_LV ? `Mở ở cấp ${WING_UNLOCK_LV}` : w ? wingName(w) : 'Chưa có'; } };
   const gb = document.createElement('button'); gb.className = 'mini'; gb.textContent = '🪽 Cánh'; gb.style.cssText = 'margin-left:4px;background:linear-gradient(#8a7aff,#3a2a9a)';
   const ref = $('btnPet2') || $('btnOutfit'); ref.parentNode.insertBefore(gb, ref.nextSibling); gb.onclick = () => { sfx('tap'); wingModal(); };
   const _gx = gainXP; gainXP = function (n) { const before = S.lv || 1; _gx(n); let k = 0; for (let L = before + 1; L <= S.lv; L++) if (L % 10 === 0) k++; if (k) setTimeout(() => { for (let i = 0; i < k; i++) openWingBox(true); }, 1800); };

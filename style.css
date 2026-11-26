@@ -283,3 +283,6 @@ input.name{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line
 
 .petgrid.wings .pet canvas{width:100%;height:auto}
 .wing-show{display:flex;justify-content:center}.wing-show canvas{width:100%;max-width:300px;height:auto}
+
+#scr-home .modes2{grid-template-columns:repeat(5,1fr);gap:5px}
+#scr-home .modes2 .mode.sm b{font-size:10.5px}#scr-home .modes2 .mode.sm small{font-size:8.5px;line-height:1.15}
