@@ -533,7 +533,7 @@ function drawWings(ctx, w, cx, cy, Hc, t, onBody) {
   const asp = im.naturalHeight / im.naturalWidth; let wh = Hc * (0.48 + w.r * 0.11), ww = wh / asp;
   const maxW = Hc * (0.82 + w.r * 0.1); if (ww > maxW) { ww = maxW; wh = ww * asp; }
   // trên người: mép trên cánh neo gần đỉnh như cánh cấp cao nhất → cánh mọc từ ngang vai, không tụt xuống eo
-  if (onBody) { const top = cy - Hc * 0.46 + (Hc * 0.92 - wh) * 0.3; cy = top + wh / 2; }
+  if (onBody) { const top = cy - Hc * 0.46 + (Hc * 0.92 - wh) * 0.3; cy = top + wh / 2; cx -= Hc * 0.05; } // nhân vật đứng nghiêng → cánh lệch nhẹ về phía lưng
   const flap = 1 + Math.sin(t * 3.2) * 0.07, bob = Math.sin(t * 3.2 + 1) * Hc * 0.012;
   ctx.save(); ctx.translate(cx, cy + bob); ctx.scale(flap, 1 - (flap - 1) * 0.4);
   if (w.r >= 2) { // quầng sáng ôm đúng hình cánh, màu theo bậc
