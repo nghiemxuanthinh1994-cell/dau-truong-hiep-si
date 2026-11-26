@@ -1327,7 +1327,6 @@ function doAction(actor, tgt, fast) {
   if (perk) {
     if (vis) {
       B.banner = { txt: PERKS[perk].n, life: 800, c: PERKS[perk].c, side: actor.side }; sfx('skill');
-      B.fx.push({ kind: 'ring', x: actor.x, y: 360 - 70, c: PERKS[perk].c, life: 550, max: 550 });
       const fxid = FX_SPR[perk]; if (fxid && ready(fxid)) B.fx.push({ kind: 'img', id: fxid, x: (perk === 'heal' || perk === 'guard') ? actor.x : tgt.x, y: 360 - 80, life: 650, max: 650, flip: actor.side > 0 });
       B.tint = { c: PERKS[perk].c, life: 260 };
     }
