@@ -1,8 +1,8 @@
-/* Tính năng mở rộng: cấp nhân vật & kinh nghiệm, Thú Linh (5 hệ × 5 bậc, mở ở cấp 20),
+/* Tính năng mở rộng: cấp nhân vật & kinh nghiệm, Thú Linh (5 hệ × 5 bậc, mở ở cấp 15),
    Boss Hẹn Giờ, Boss Liên Server, Bảng Xếp Hạng. Nạp SAU game.js và chest.js. */
 'use strict';
 // ================== CẤP NHÂN VẬT ==================
-const LV_MAX = 100, PET_UNLOCK_LV = 20;
+const LV_MAX = 100, PET_UNLOCK_LV = 15;
 const xpNeed = (lv) => Math.round(60 * Math.pow(lv, 1.55));
 function ensureFeat() {
   if (!S) return; if (!S.lv) S.lv = 1; if (S.xp == null) S.xp = 0; if (!S.pets) S.pets = []; if (S.eggs == null) S.eggs = 0; if (S.pstone == null) S.pstone = 0; if (!S.pb) S.pb = {};
@@ -514,3 +514,72 @@ setInterval(markSeen, 30000); // ghi mốc thời gian đang chơi
 document.addEventListener('visibilitychange', () => { if (document.hidden) markSeen(); else checkOffline(); });
 addEventListener('pagehide', markSeen);
 setTimeout(checkOffline, 1200);
+
+// ================== CÁNH (mở ở cấp 10) ==================
+// 5 hệ × 5 bậc như thú linh. Cánh vẽ sau lưng nhân vật, đập nhẹ; bậc càng cao càng phát sáng.
+const WING_UNLOCK_LV = 10;
+const WING_TIER = ['Cánh Non', 'Cánh Lông Vũ', 'Cánh Khảm Kim', 'Cánh Bảo Ngọc', 'Cánh Thần Thoại'];
+const WING_BONUS = [0.02, 0.04, 0.07, 0.11, 0.16], WING_SPEED = [1, 2, 3, 5, 8], WING_W = [50, 28, 14, 6, 2];
+const WING_ELEMS = [...PET_ELEMS, 'quang']; // thêm bộ Cánh Thiên Thần (hệ Quang)
+const wingName = (w) => w.e === 'quang' ? `${WING_TIER[w.r]} Thiên Thần` : `${WING_TIER[w.r]} ${ELEM[w.e].n}`;
+for (const e of WING_ELEMS) for (let r = 0; r < 5; r++) { const id = `wing-${e}-${r}`; if (!SPR[id]) { const im = new Image(); im.src = `${id}.webp`; SPR[id] = im; } }
+function curWing() { if (!S || !S.wings || (S.lv || 1) < WING_UNLOCK_LV) return null; return S.wings.find(w => w.id === S.wing) || null; }
+// cộng chỉ số cánh vào applyBonuses
+const _applyBonusesW = applyBonuses;
+applyBonuses = function (st) { st = _applyBonusesW(st); const w = curWing(); if (w) { const b = WING_BONUS[w.r]; st.atk = Math.round(st.atk * (1 + b)); st.hp = Math.round(st.hp * (1 + b)); st.speed = (st.speed || 0) + WING_SPEED[w.r]; } return st; };
+function drawWings(ctx, w, cx, cy, Hc, t) {
+  const im = SPR[`wing-${w.e}-${w.r}`]; if (!im || !im.complete || !im.naturalWidth) return;
+  // cỡ theo diện tích (cánh dài-hẹp và cánh rộng-thấp nhìn to bằng nhau), vừa với thân nhân vật
+  const base = Hc * (0.62 + w.r * 0.05), asp = im.naturalHeight / im.naturalWidth; let ww = base * Math.sqrt(0.8 / asp), wh = ww * asp; if (wh > Hc * 0.92) { ww *= Hc * 0.92 / wh; wh = Hc * 0.92; }
+  const flap = 1 + Math.sin(t * 3.2) * 0.07, bob = Math.sin(t * 3.2 + 1) * Hc * 0.012;
+  ctx.save(); ctx.translate(cx, cy + bob); ctx.scale(flap, 1 - (flap - 1) * 0.4);
+  if (w.r >= 2) { // quầng sáng ôm đúng hình cánh, màu theo bậc
+    const S2 = imgSil(im, PET_RCOL[w.r]), pw = S2.p * wh; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.25 + (w.r - 2) * 0.18) * (0.75 + 0.25 * Math.sin(t * 3));
+    ctx.drawImage(S2.c, -ww / 2 - pw, -wh / 2 - pw, ww + pw * 2, wh + pw * 2); ctx.restore(); }
+  ctx.drawImage(im, -ww / 2, -wh / 2, ww, wh);
+  if (w.r >= 3) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3 + w.r * 2; i++) { const a = t * 0.8 + i * 2.1, px = Math.cos(a) * ww * 0.42, py = Math.sin(a * 1.3) * wh * 0.35, tw = Math.max(0, Math.sin(t * 5 + i * 1.7)); if (tw > 0.2) drawStar4(ctx, px, py, 2 + w.r * 0.8, PET_RCOL[w.r], tw); } ctx.restore(); }
+  ctx.restore();
+}
+function openWingBox(free) {
+  ensureFeat(); S.wings = S.wings || [];
+  if (!free) { if (S.gems < 150) return toast('Không đủ ngọc'); S.gems -= 150; }
+  const w = { id: uid(), e: pick(WING_ELEMS), r: weighted(WING_W) };
+  const dup = S.wings.find(q => q.e === w.e && q.r === w.r), refund = (w.r + 1) * 30;
+  if (dup) S.gems += refund; else { S.wings.push(w); if (!S.wing) S.wing = w.id; }
+  save(); render(); sfx('chest');
+  modal(`<h3>🪽 Mở Hộp Cánh</h3><div class="wing-show"><canvas id="wingCv" width="300" height="200"></canvas></div>
+    <div class="rr" style="text-align:center;font-weight:800;color:${PET_RCOL[w.r]}">${PET_RAR[w.r]}</div><div style="text-align:center;font-size:18px;font-weight:800">${wingName(w)}</div>
+    ${dup ? `<p class="hint" style="text-align:center">Đã có cánh này → hoàn 💎${refund}</p>` : ''}
+    <div class="btns"><button class="btn ok" id="bOk">Tuyệt vời!</button></div>`, root => {
+    bindBtns(root, { '#bOk': () => wingModal() });
+    const cv = root.querySelector('#wingCv'), t0 = performance.now();
+    const loop = (now) => { if (!document.body.contains(cv)) return; const x = hd(cv, 300, 200); x.clearRect(0, 0, 300, 200); drawWings(x, w, 150, 100, 170, (now - t0) / 1000); requestAnimationFrame(loop); }; requestAnimationFrame(loop);
+  });
+}
+function wingModal() {
+  ensureFeat(); S.wings = S.wings || [];
+  if (S.lv < WING_UNLOCK_LV) return modal(`<h3>🪽 Cánh</h3><p style="text-align:center;font-size:14px">Đạt <b>cấp ${WING_UNLOCK_LV}</b> để mở ô Cánh.<br>Hiện tại: cấp ${S.lv}.</p><p class="hint">Cánh mọc sau lưng hiệp sĩ, tăng công, máu và tốc độ. ${WING_ELEMS.length} bộ (5 hệ + Thiên Thần), mỗi bộ 5 bậc; bậc cao phát sáng.</p><div class="btns"><button class="btn" id="bC">Đóng</button></div>`, r => bindBtns(r, { '#bC': closeModal }));
+  const cur = curWing();
+  let html = `<h3>🪽 Cánh</h3>${cur ? `<p class="hint" style="text-align:center">Đang mang: <b style="color:${PET_RCOL[cur.r]}">${wingName(cur)}</b> · +${Math.round(WING_BONUS[cur.r] * 100)}% công/máu · +${WING_SPEED[cur.r]} tốc</p>` : '<p class="hint" style="text-align:center">Chạm một đôi cánh đã có để mang.</p>'}
+    <div class="btns" style="margin-top:0"><button class="btn ok" id="bBox" ${S.gems >= 150 ? '' : 'disabled'}>Mở Hộp Cánh 💎150</button>${cur ? '<button class="btn" id="bOff">Tháo cánh</button>' : ''}</div><div class="petgrid wings">`;
+  for (const e of WING_ELEMS) for (let r = 0; r < 5; r++) { const own = S.wings.find(w => w.e === e && w.r === r), on = own && cur && own.id === cur.id;
+    html += `<div class="pet ${own ? '' : 'lock'} ${on ? 'on' : ''}" data-id="${own ? own.id : ''}" style="--pc:${PET_RCOL[r]}"><canvas class="wcv" data-e="${e}" data-r="${r}" width="90" height="70"></canvas><b>${wingName({ e, r })}</b><small class="t${[0, 2, 3, 4, 6][r]}">${PET_RAR[r]}</small></div>`; }
+  html += `</div><div class="btns"><button class="btn" id="bC">Đóng</button></div>`;
+  modal(html, root => {
+    bindBtns(root, { '#bC': closeModal, '#bBox': () => openWingBox(false), '#bOff': () => { S.wing = null; save(); render(); wingModal(); } });
+    root.querySelectorAll('.pet[data-id]').forEach(el => { if (el.dataset.id) el.onclick = () => { S.wing = el.dataset.id; save(); sfx('tap'); render(); wingModal(); }; });
+    const t0 = performance.now(), cvs = [...root.querySelectorAll('.wcv')];
+    const loop = (now) => { if (!cvs.length || !document.body.contains(cvs[0])) return; for (const cv of cvs) { const x = hd(cv, 90, 70); x.clearRect(0, 0, 90, 70); drawWings(x, { e: cv.dataset.e, r: +cv.dataset.r }, 45, 35, 62, (now - t0) / 1000 + (+cv.dataset.r)); } requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  });
+}
+// nút Cánh ở màn Trang bị + thưởng hộp cánh khi lên cấp 10, 20, 30…
+(function hookWings() {
+  const gb = document.createElement('button'); gb.className = 'mini'; gb.textContent = '🪽 Cánh'; gb.style.cssText = 'margin-left:4px;background:linear-gradient(#8a7aff,#3a2a9a)';
+  const ref = $('btnPet2') || $('btnOutfit'); ref.parentNode.insertBefore(gb, ref.nextSibling); gb.onclick = () => { sfx('tap'); wingModal(); };
+  const _gx = gainXP; gainXP = function (n) { const before = S.lv || 1; _gx(n); let k = 0; for (let L = before + 1; L <= S.lv; L++) if (L % 10 === 0) k++; if (k) setTimeout(() => { for (let i = 0; i < k; i++) openWingBox(true); }, 1800); };
+  GIFT_CODES.CANHTHAN = { gems: 300, n: 'Quà cánh thần' };
+  const _rs2 = renderShop; renderShop = function () { _rs2(); const shop = $('shop'); if (!shop || shop.querySelector('#bWingShop')) return; const d = document.createElement('div'); d.className = 'chest';
+    d.innerHTML = `<span class="big">🪽</span><b>Hộp Cánh</b><small>Ra cánh 6 bộ (có Thiên Thần) · Thần Thoại 2% · cần cấp ${WING_UNLOCK_LV}</small><button id="bWingShop" ${S.gems >= 150 && (S.lv || 1) >= WING_UNLOCK_LV ? '' : 'disabled'}>💎150</button>`;
+    shop.appendChild(d); d.querySelector('button').onclick = () => openWingBox(false); };
+})();

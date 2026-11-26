@@ -163,6 +163,7 @@ const SKILL_2 = { hoa: 'whirl', bang: 'guard', loi: 'whirl', doc: 'leech', tho: 
 ].forEach(([id, n, e, ps, boss], i) => MONSTERS.push({ id, n, e, ps, boss: !!boss, sk: [[SKILL_OF[e], boss ? 20 : 14 + (i % 4) * 2], [SKILL_2[e], boss ? 12 : 7]] }));
 // Hướng vẽ sẵn của từng ảnh quái (đã soát bằng mắt): các ảnh quay TRÁI -> lật để luôn nhìn về nhân vật bên trái
 const NATIVE_LEFT = new Set([
+  'dau-si-gau', 'quy-sam', 'long-nhan-bang', 'pharaoh', 'oni-samurai', 'ky-si-su-ung', 'nguoi-tuyet', // 9 quái vẽ lại cho đủ hình 2026-11-26 đều quay trái (cùng bo-xuong, bong-ma-ky-si, coc-doc, ma-vuong, nu-hoang-naga)
   'bo-xuong', 'bong-ma-ky-si', 'coc-doc', 'cua-hiep-si', 'goblin-cuop', 'khong-lo-bang',
   'ky-si-co-khi', 'ky-si-su-ung', 'lanh-chua', 'long-ky-si', 'ma-vuong', 'nam-khong-lo',
   'nguoi-cay', 'nguoi-soi', 'nguu-ma', 'nhen-yeu-tinh', 'ninja-bong-toi', 'nu-hoang-naga',
@@ -399,6 +400,7 @@ function lookFromGear(gear, banner, boss, outfit) {
   };
   L0.body = BODY_SPR[gear.armor ? Math.min(gear.armor.rar, 6) : 0];
   L0.wk = gear.weapon ? gear.weapon.wk : null; L0.wR = gear.weapon ? gear.weapon.rar : 0; L0.wFire = !!(gear.weapon && gear.weapon.perk === 'fire');
+  L0.wing = (typeof S !== 'undefined' && S && gear === S.gear && typeof curWing === 'function') ? curWing() : null; // cánh sau lưng (chỉ nhân vật của người chơi)
   L0.sh = gear.shield ? pickTier(SHIELD_SPR, Math.min(gear.shield.rar, 7)) : null; L0.sR = gear.shield ? gear.shield.rar : 0;
   L0.layered = true;
   L0.paper = { dau: gear.helmet, vai: gear.shoulder, giap: gear.armor, quan: gear.pants, gang: gear.gloves, giay: gear.boots };
@@ -578,7 +580,7 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
     ctx.restore();
   }
   const arm = pose.arm != null ? pose.arm : 0.6;
-  const lean = arm < 0.6 ? (arm - 0.6) / 2.7 * 0.16 : (arm - 0.6) / 0.7 * 0.2;
+  const lean = arm < 0.6 ? (arm - 0.6) / 2.7 * 0.05 : (arm - 0.6) / 0.7 * 0.06; // nghiêng rất nhẹ, không đổ người về trước
   const breathe = 1 + Math.sin(t * 2.4 + x) * 0.018, hop = pose.walk ? Math.abs(Math.sin(pose.walk)) * 6 * sc : 0;
   ctx.scale(facing, 1); ctx.translate(0, -hop); ctx.rotate(lean - dead * 1.35); ctx.translate(-dead * 18, 0);
   ctx.scale(1 + (breathe - 1) * -0.5, breathe); ctx.globalAlpha = 1 - dead * 0.35;
@@ -588,6 +590,7 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
   const [pc, px, PW, PH] = scratch('paper' + (pose.key || ''), Wc, Hc);
   for (const v of ['giay', 'quan', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) px.drawImage(SPR[id], 4, 4, PW - 8, PH - 8); }
   flashScratch(px, PW, PH, (pose.flash || 0) * 0.7);
+  if (L.wing && typeof drawWings === 'function' && dead < 1) drawWings(ctx, L.wing, ox + Wc * (LOPM.cx || 0.5), oy + Hc * (LOPM.figTop + 0.42 * (LOPM.feet - LOPM.figTop)), Hc, t); // cánh vẽ sau lưng, tâm cánh = giữa lưng
   if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = Math.min(10, 4 + (L.tier || 0) * 1.2); }
   ctx.drawImage(pc, 0, 0, PW, PH, ox - 4 / DPR, oy - 4 / DPR, PW / DPR, PH / DPR); ctx.shadowBlur = 0;
   { // ánh hào quang phủ lên giáp khi mặc đồ từ Sử Thi (tím) trở lên; đồ thấp hơn không phát sáng
@@ -689,9 +692,10 @@ function drawStatusFx(ctx, f, x, ground, fsc, t) {
     for (let i = 0; i < 5; i++) { const k = (t * 0.7 + i / 5) % 1; ctx.globalAlpha = Math.sin(k * Math.PI); ctx.strokeStyle = '#b8ff5a'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(x + Math.sin(i * 9.7) * w, ground - H * (0.4 + k * 0.6), (2 + (i % 3)) * fsc, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
   }
-  if (f.stun) { // sao vàng xoay quanh đầu
-    ctx.save(); const hy = ground - H * 1.08;
-    for (let i = 0; i < 4; i++) { const a = t * 4 + i * Math.PI / 2, sx = x + Math.cos(a) * w * 0.9, sy = hy + Math.sin(a) * 6 * fsc; drawStar4(ctx, sx, sy, (4 + (Math.sin(a) + 1) * 1.5) * fsc, '#ffe14a', 0.95); }
+  if (f.stun || (f.stunFx && f.stunFx > performance.now())) { // choáng: vòng sao vàng xoay quanh đầu (sao phía sau mờ và nhỏ hơn -> có chiều sâu)
+    ctx.save(); const hy = ground - H * 1.12, rx = w * 0.95, ry = 7 * fsc;
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = '#ffe98a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(x, hy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    for (let i = 0; i < 5; i++) { const a = t * 4.5 + i * Math.PI * 2 / 5, z = Math.sin(a), sx = x + Math.cos(a) * rx, sy = hy + z * ry; drawStar4(ctx, sx, sy, (5 + (z + 1) * 2.2) * fsc, '#ffd23a', 0.55 + (z + 1) * 0.22); }
     ctx.restore();
   }
 }
@@ -704,12 +708,12 @@ function drawLightning(ctx, p, ground) {
   const branches = []; for (let b = 0; b < 4; b++) { const i0 = Math.floor(pts.length * (0.25 + R() * 0.5)), [sx, sy] = pts[i0], dir = R() < 0.5 ? -1 : 1, br = [[sx, sy]]; let x = sx, y = sy; for (let k = 0; k < 6; k++) { x += dir * (6 + R() * 12); y += 10 + R() * 14; br.push([x, y]); } branches.push(br); }
   const stroke = (arr, lw, c, a, blur) => { ctx.globalAlpha = a * flick * Math.min(1, life * 2.2); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.shadowColor = '#ffe14a'; ctx.shadowBlur = blur; ctx.beginPath(); arr.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); };
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'round';
-  stroke(pts, 14, 'rgba(255,220,80,.35)', 1, 24); for (const br of branches) stroke(br, 4, '#ffd84a', 0.7, 10);
+  stroke(pts, 9, 'rgba(255,220,80,.35)', 1, 16); for (const br of branches) stroke(br, 4, '#ffd84a', 0.7, 10);
   stroke(pts, 5, '#fff1a0', 1, 14); for (const br of branches) stroke(br, 1.2, '#ffffff', 0.9, 0); stroke(pts, 2, '#ffffff', 1, 0);
   // vòng va chạm + tia bắn dưới chân
   const k = Math.min(1, age * 2.5); ctx.shadowBlur = 0; ctx.globalAlpha = (1 - k) * 0.9; ctx.strokeStyle = '#fff3a0'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.ellipse(p.x, bot, 20 + k * 70, 6 + k * 16, 0, 0, Math.PI * 2); ctx.stroke();
-  const g = ctx.createRadialGradient(p.x, bot, 0, p.x, bot, 70); g.addColorStop(0, 'rgba(255,250,200,.9)'); g.addColorStop(1, 'rgba(255,200,60,0)'); ctx.globalAlpha = (1 - k) * flick; ctx.fillStyle = g; ctx.fillRect(p.x - 70, bot - 70, 140, 140);
+  ctx.beginPath(); ctx.ellipse(p.x, bot, 14 + k * 46, 5 + k * 11, 0, 0, Math.PI * 2); ctx.stroke();
+  const g = ctx.createRadialGradient(p.x, bot, 0, p.x, bot, 46); g.addColorStop(0, 'rgba(255,250,200,.9)'); g.addColorStop(1, 'rgba(255,200,60,0)'); ctx.globalAlpha = (1 - k) * flick; ctx.fillStyle = g; ctx.fillRect(p.x - 46, bot - 46, 92, 92);
   ctx.restore();
 }
 function drawFighter(ctx, x, y, sc, L, facing, pose) {
@@ -760,7 +764,7 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   }
   // tư thế: nghiêng theo pha vung đòn, thở, ngã khi thua
   const arm = pose.arm != null ? pose.arm : 0.6;
-  const lean = arm < 0.6 ? (arm - 0.6) / 2.7 * 0.16 : (arm - 0.6) / 0.7 * 0.2; // ngả sau rồi chồm tới
+  const lean = arm < 0.6 ? (arm - 0.6) / 2.7 * 0.05 : (arm - 0.6) / 0.7 * 0.06; // nghiêng rất nhẹ, không đổ người về trước
   const breathe = 1 + Math.sin(t * 2.4 + x) * 0.018;
   const hop = pose.walk ? Math.abs(Math.sin(pose.walk)) * 6 * sc : 0;
   ctx.scale(L.faceL ? -facing : facing, 1); // ảnh vẽ sẵn quay trái thì lật ngược để luôn nhìn về đối thủ
@@ -1313,7 +1317,7 @@ function doAction(actor, tgt, fast) {
   tryRevive(actor, vis);
   if (actor.hp <= 0) return;
   if (actor.passive === 'regen' && actor.hp < actor.maxHp) { const h = Math.round(actor.maxHp * 0.05); actor.hp = Math.min(actor.maxHp, actor.hp + h); if (vis) { addText(actor, '+' + h, '#5dff8a'); burst(actor, '#5dff8a', 5, 'heal'); } }
-  if (actor.stun) { actor.stun = false; if (vis) addText(actor, 'Choáng!', '#ffe14a'); return; }
+  if (actor.stun) { actor.stun = false; actor.stunFx = performance.now() + 900; if (vis) addText(actor, 'CHOÁNG! Mất lượt', '#ffe14a', true); return; } // choáng: mất 1 lượt, sao vẫn xoay thêm chút
 
   actor.swC = ELEM[actor.elem || 'vo'].c;
   // Kích hoạt chiêu (tối đa 1)
@@ -1437,7 +1441,7 @@ function drawBattle(now) {
     const dx = f.lunge * 42 * dir - dir * (f.kb || 0) * 14; // lao tới + giật lùi khi trúng
     const fsc = 1.18 * Math.pow(BH / 640, 0.7); // máy càng dài, nhân vật càng to (nhỏ lại ~10% theo yêu cầu)
     const hx = f.side < 0 ? 80 : 280, fitW = 2 * Math.min(hx, 360 - hx) + 36, fitH = ground + Math.round((BH - 640) * 0.62) - 130;
-    drawFighter(ctx, f.x + dx, ground, fsc, f.look, dir, { key: 'b' + f.side, t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk, flash: f.flash, maxW: 170, fitW, fitH });
+    drawFighter(ctx, f.x + dx, ground, fsc, f.look, dir, { key: 'b' + f.side, t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk || (f.lunge > 0 ? Math.min(1, f.lunge) * Math.PI : 0), flash: f.flash, maxW: 170, fitW, fitH }); // lao tới = bước nhún lên khỏi mặt đất
     if (f.swoosh > 0) drawSwoosh(ctx, f, dx, ground);
     if (!f.dead) drawStatusFx(ctx, f, f.x + dx, ground, fsc, now / 1000);
   }
@@ -1447,11 +1451,11 @@ function drawBattle(now) {
   for (const p of B.fx) {
     if (p.kind === 'ring') {
       const k = 1 - p.life / p.max; ctx.globalAlpha = (1 - k) * 0.9; ctx.strokeStyle = p.c; ctx.lineWidth = 6 * (1 - k) + 1;
-      ctx.shadowColor = p.c; ctx.shadowBlur = 20; ctx.beginPath(); ctx.ellipse(p.x, p.y + oy, 30 + k * 90, 12 + k * 30, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowColor = p.c; ctx.shadowBlur = 20; ctx.beginPath(); ctx.ellipse(p.x, p.y + oy, 22 + k * 58, 9 + k * 20, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(p.x, p.y + oy - 60, 10 + k * 50, 10 + k * 50, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = 1; continue;
     }
     if (p.kind === 'img') {
-      const k = 1 - p.life / p.max, im = SPR[p.id], s2 = 210 * (0.6 + k * 0.7), w2 = s2 * im.naturalWidth / im.naturalHeight;
+      const k = 1 - p.life / p.max, im = SPR[p.id], s2 = 140 * (0.6 + k * 0.6), w2 = s2 * im.naturalWidth / im.naturalHeight;
       ctx.save(); ctx.globalAlpha = k < 0.2 ? k / 0.2 : (1 - k) / 0.8; ctx.translate(p.x, p.y + oy); if (p.flip) ctx.scale(-1, 1);
       ctx.rotate((k - 0.5) * 0.4); ctx.drawImage(im, -w2 / 2, -s2 / 2, w2, s2); ctx.restore(); ctx.globalAlpha = 1; continue;
     }
@@ -1462,7 +1466,7 @@ function drawBattle(now) {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
-  if (B.tint) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = B.tint.life / 260 * 0.25; ctx.fillStyle = B.tint.c; ctx.fillRect(0, -400, 360, 1700); ctx.restore(); }
+  if (B.tint) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = B.tint.life / 260 * 0.14; ctx.fillStyle = B.tint.c; ctx.fillRect(0, -400, 360, 1700); ctx.restore(); }
   for (const t of B.texts) {
     ctx.globalAlpha = Math.min(1, t.life / 300); ctx.textAlign = 'center';
     ctx.font = `900 ${t.big ? 24 : 18}px Segoe UI, Arial`; ctx.lineWidth = 4; ctx.strokeStyle = '#000';
