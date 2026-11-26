@@ -527,10 +527,13 @@ function curWing() { if (!S || !S.wings || (S.lv || 1) < WING_UNLOCK_LV) return 
 // cộng chỉ số cánh vào applyBonuses
 const _applyBonusesW = applyBonuses;
 applyBonuses = function (st) { st = _applyBonusesW(st); const w = curWing(); if (w) { const b = WING_BONUS[w.r]; st.atk = Math.round(st.atk * (1 + b)); st.hp = Math.round(st.hp * (1 + b)); st.speed = (st.speed || 0) + WING_SPEED[w.r]; } return st; };
-function drawWings(ctx, w, cx, cy, Hc, t) {
+function drawWings(ctx, w, cx, cy, Hc, t, onBody) {
   const im = SPR[`wing-${w.e}-${w.r}`]; if (!im || !im.complete || !im.naturalWidth) return;
-  // cỡ theo diện tích (cánh dài-hẹp và cánh rộng-thấp nhìn to bằng nhau), vừa với thân nhân vật
-  const base = Hc * (0.62 + w.r * 0.05), asp = im.naturalHeight / im.naturalWidth; let ww = base * Math.sqrt(0.8 / asp), wh = ww * asp; if (wh > Hc * 0.92) { ww *= Hc * 0.92 / wh; wh = Hc * 0.92; }
+  // cỡ tăng đều theo cấp: cao 48% → 92% khung, bề ngang có trần theo cấp (cánh dẹt cấp thấp không bè ra)
+  const asp = im.naturalHeight / im.naturalWidth; let wh = Hc * (0.48 + w.r * 0.11), ww = wh / asp;
+  const maxW = Hc * (0.82 + w.r * 0.1); if (ww > maxW) { ww = maxW; wh = ww * asp; }
+  // trên người: mép trên cánh neo gần đỉnh như cánh cấp cao nhất → cánh mọc từ ngang vai, không tụt xuống eo
+  if (onBody) { const top = cy - Hc * 0.46 + (Hc * 0.92 - wh) * 0.3; cy = top + wh / 2; }
   const flap = 1 + Math.sin(t * 3.2) * 0.07, bob = Math.sin(t * 3.2 + 1) * Hc * 0.012;
   ctx.save(); ctx.translate(cx, cy + bob); ctx.scale(flap, 1 - (flap - 1) * 0.4);
   if (w.r >= 2) { // quầng sáng ôm đúng hình cánh, màu theo bậc

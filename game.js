@@ -590,7 +590,7 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
   const [pc, px, PW, PH] = scratch('paper' + (pose.key || ''), Wc, Hc);
   for (const v of ['giay', 'quan', 'giap', 'gang', 'vai', 'dau']) { const id = lopId(v, P[v]); if (id) px.drawImage(SPR[id], 4, 4, PW - 8, PH - 8); }
   flashScratch(px, PW, PH, (pose.flash || 0) * 0.7);
-  if (L.wing && typeof drawWings === 'function' && dead < 1) drawWings(ctx, L.wing, ox + Wc * (LOPM.cx || 0.5), oy + Hc * (LOPM.figTop + 0.42 * (LOPM.feet - LOPM.figTop)), Hc, t); // cánh vẽ sau lưng, tâm cánh = giữa lưng
+  if (L.wing && typeof drawWings === 'function' && dead < 1) drawWings(ctx, L.wing, ox + Wc * (LOPM.cx || 0.5), oy + Hc * (LOPM.figTop + 0.42 * (LOPM.feet - LOPM.figTop)), Hc, t, true); // cánh vẽ sau lưng, tâm cánh = giữa lưng
   if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = Math.min(10, 4 + (L.tier || 0) * 1.2); }
   ctx.drawImage(pc, 0, 0, PW, PH, ox - 4 / DPR, oy - 4 / DPR, PW / DPR, PH / DPR); ctx.shadowBlur = 0;
   { // ánh hào quang phủ lên giáp khi mặc đồ từ Sử Thi (tím) trở lên; đồ thấp hơn không phát sáng
@@ -1327,7 +1327,7 @@ function doAction(actor, tgt, fast) {
   if (perk) {
     if (vis) {
       B.banner = { txt: PERKS[perk].n, life: 800, c: PERKS[perk].c, side: actor.side }; sfx('skill');
-      const fxid = FX_SPR[perk]; if (fxid && ready(fxid)) B.fx.push({ kind: 'img', id: fxid, x: (perk === 'heal' || perk === 'guard') ? actor.x : tgt.x, y: 360 - 80, life: 650, max: 650, flip: actor.side > 0 });
+      const fxid = FX_SPR[perk]; if (fxid && ready(fxid)) B.fx.push({ kind: 'img', id: fxid, x: (perk === 'heal' || perk === 'guard') ? actor.x : tgt.x, y: 360 - 80, life: 650, max: 650, flip: actor.side > 0, sc: fxid === 'fx-bang' ? 0.6 : 1 }); // băng thu nhỏ
       B.tint = { c: PERKS[perk].c, life: 260 };
     }
     actor.swC = PERKS[perk].c;
@@ -1454,7 +1454,7 @@ function drawBattle(now) {
       ctx.beginPath(); ctx.ellipse(p.x, p.y + oy - 60, 10 + k * 50, 10 + k * 50, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = 1; continue;
     }
     if (p.kind === 'img') {
-      const k = 1 - p.life / p.max, im = SPR[p.id], s2 = 140 * (0.6 + k * 0.6), w2 = s2 * im.naturalWidth / im.naturalHeight;
+      const k = 1 - p.life / p.max, im = SPR[p.id], s2 = 140 * (p.sc || 1) * (0.6 + k * 0.6), w2 = s2 * im.naturalWidth / im.naturalHeight;
       ctx.save(); ctx.globalAlpha = k < 0.2 ? k / 0.2 : (1 - k) / 0.8; ctx.translate(p.x, p.y + oy); if (p.flip) ctx.scale(-1, 1);
       ctx.rotate((k - 0.5) * 0.4); ctx.drawImage(im, -w2 / 2, -s2 / 2, w2, s2); ctx.restore(); ctx.globalAlpha = 1; continue;
     }
