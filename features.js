@@ -535,7 +535,9 @@ function drawWings(ctx, w, cx, cy, Hc, t, onBody) {
   // trên người: mép trên cánh neo gần đỉnh như cánh cấp cao nhất → cánh mọc từ ngang vai, không tụt xuống eo
   if (onBody) { const top = cy - Hc * 0.46 + (Hc * 0.92 - wh) * 0.3; cy = top + wh / 2; cx -= Hc * 0.05; } // nhân vật đứng nghiêng → cánh lệch nhẹ về phía lưng
   const flap = 1 + Math.sin(t * 3.2) * 0.07, bob = Math.sin(t * 3.2 + 1) * Hc * 0.012;
-  ctx.save(); ctx.translate(cx, cy + bob); ctx.scale(flap, 1 - (flap - 1) * 0.4);
+  ctx.save(); ctx.translate(cx, cy + bob);
+  if (onBody) { ctx.rotate(-0.09); ctx.transform(1, 0, -0.06, 1, 0, 0); ctx.scale(0.93, 1); } // nghiêng theo dáng đứng 3/4 (theo hướng nhân vật vì khung đã lật theo facing)
+  ctx.scale(flap, 1 - (flap - 1) * 0.4);
   if (w.r >= 2) { // quầng sáng ôm đúng hình cánh, màu theo bậc
     const S2 = imgSil(im, PET_RCOL[w.r]), pw = S2.p * wh; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.25 + (w.r - 2) * 0.18) * (0.75 + 0.25 * Math.sin(t * 3));
     ctx.drawImage(S2.c, -ww / 2 - pw, -wh / 2 - pw, ww + pw * 2, wh + pw * 2); ctx.restore(); }
