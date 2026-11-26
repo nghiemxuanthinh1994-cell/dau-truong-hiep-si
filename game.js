@@ -1148,9 +1148,21 @@ function genOpponent(targetPower, ilvl, opts) {
   const gear = {}; const rw = opts.rarW || [40, 32, 18, 8, 2];
   for (const s of SLOTS) { if (Math.random() < (opts.fill ?? 0.85) || s.id === 'weapon' || s.id === 'armor') gear[s.id] = makeItem(s.id, Math.max(1, ilvl + rint(-1, 1)), weighted(rw)); else gear[s.id] = null; }
   let st = calcStats(gear);
-  if (targetPower) { const f = targetPower / powerOf(st); st.atk = Math.max(4, Math.round(st.atk * f)); st.hp = Math.max(40, Math.round(st.hp * f)); }
+  if (targetPower) {
+    // Cân bằng: đối thủ giữ cùng tỉ lệ Công/Máu với người chơi (lệch ±12% cho đa dạng), rồi co giãn cho khớp lực chiến mục tiêu.
+    // (Trước đây tỉ lệ lấy theo đồ của đối thủ nên người chơi thiên máu gặp đối thủ công cao gấp hơn 10 lần.)
+    const me = (typeof S !== 'undefined' && S) ? myStats() : st, tilt = rnd(0.88, 1.12);
+    const base = { atk: me.atk * tilt, hp: me.hp / tilt, block: st.block, speed: st.speed };
+    const f = targetPower / Math.max(1, powerOf(base));
+    st.atk = Math.max(4, Math.round(base.atk * f)); st.hp = Math.max(40, Math.round(base.hp * f));
+  }
   if (opts.boss) { st.atk = Math.round(st.atk * 1.25); st.hp = Math.round(st.hp * 1.5); }
   return { name: opts.name || (opts.mon ? opts.mon.n : pick(NAMES)), gear, stats: st, banner: pick(BANNERS), boss: !!opts.boss, mon: opts.mon || null };
+}
+// Phân bố phẩm chất đồ của đối thủ quanh mức đồ trung bình người chơi đang mặc (đồ nhìn thấy khớp với chỉ số)
+function gearRarW() {
+  const its = SLOTS.map(s => S.gear[s.id]).filter(Boolean), avg = its.length ? its.reduce((a, it) => a + it.rar, 0) / its.length : 0;
+  return [0, 1, 2, 3, 4, 5, 6, 7].map(r => Math.max(0.01, Math.exp(-Math.pow(r - avg, 2) / 1.1) * (r >= 6 ? 0.5 : 1)));
 }
 function meFighter() { return { name: S.name, gear: S.gear, stats: myStats(), banner: S.banner, outfit: S.outfit }; }
 
@@ -1472,7 +1484,7 @@ function drawBattle(now) {
 // ================== CHẾ ĐỘ: ĐẤU HẠNG ==================
 function startRanked() {
   const li = leagueIdx(S.trophies);
-  const make = () => genOpponent(powerOf(myStats()) * rnd(0.82, 1.12), Math.round(avgIlvl()), { rarW: [Math.max(4, 45 - li * 7), 30, 14 + li * 3, 6 + li * 3, 1 + li * 2, li >= 4 ? li - 2 : 0, li >= 6 ? 2 : 0] });
+  const make = () => genOpponent(powerOf(myStats()) * rnd(0.85, 1.1), Math.round(avgIlvl()), { rarW: gearRarW() });
   let op = make();
   const show = () => vsScreen(op, { title: `Đấu Hạng · ${LEAGUES[li].n}`, arena: 'dau-truong', reroll: () => { op = make(); show(); }, onEnd: rankedEnd });
   show();

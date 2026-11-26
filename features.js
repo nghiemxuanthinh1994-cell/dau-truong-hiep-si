@@ -479,3 +479,38 @@ function settingsModal() {
     });
   });
 }
+
+// ================== PHẦN THƯỞNG KHI VẮNG MẶT (theo thời gian thực) ==================
+// Rời game từ 5 phút trở lên: nhận vàng + kinh nghiệm theo giờ vắng (tối đa 12 giờ), cứ 2 giờ thêm 1 rương (càng lâu rương càng quý).
+const OFF_MIN_MS = 5 * 60e3, OFF_CAP_H = 12;
+function offlineCalc(ms) {
+  const h = Math.min(OFF_CAP_H, ms / 3.6e6), lvl = dropLevel();
+  const gold = Math.round(h * (120 + lvl * 40)), xp = Math.round(h * (30 + (S.lv || 1) * 6)), chests = [];
+  for (let i = 0; i < Math.floor(h / 2); i++) chests.push({ type: i >= 5 ? 'gold' : i >= 2 ? 'silver' : 'wood', ilvl: lvl });
+  if (h >= OFF_CAP_H) chests.push({ type: 'legend', ilvl: lvl }); // đủ 12 giờ: thêm Rương Huyền Thoại
+  return { h, ms, gold, xp, chests };
+}
+const fmtAway = (ms) => { const m = Math.floor(ms / 60000), h = Math.floor(m / 60); return h ? `${h} giờ ${m % 60} phút` : `${m} phút`; };
+function markSeen() { if (S) { S.lastSeen = Date.now(); save(); } }
+function checkOffline() {
+  ensureFeat(); const now = Date.now(), last = S.lastSeen || now; S.lastSeen = now;
+  if (now - last >= OFF_MIN_MS && !S.offPending) S.offPending = offlineCalc(now - last);
+  save(); if (S.offPending) showOffline();
+}
+function showOffline() {
+  const r = S.offPending; if (!r) return;
+  if (!$('modal').classList.contains('hidden') || !$('battle').classList.contains('hidden')) { setTimeout(showOffline, 1500); return; } // chờ hộp thoại / trận đấu khác xong
+  const give = (mult) => { S.offPending = null; S.gold += r.gold * mult; gainXP(r.xp * mult); queueChests(r.chests); save(); render(); closeModal(); sfx('win'); afterChestHook(); };
+  const cnt = {}; r.chests.forEach(c => cnt[c.type] = (cnt[c.type] || 0) + 1);
+  modal(`<h3>🌙 Phần thưởng khi vắng mặt</h3>
+    <p class="hint" style="text-align:center">Bạn đã rời đi <b>${fmtAway(r.ms)}</b>${r.h >= OFF_CAP_H ? ' (tính tối đa 12 giờ)' : ''}.<br>Hiệp sĩ vẫn chinh chiến và mang về:</p>
+    <div class="reward-line"><span>🪙 +${fmt(r.gold)}</span><span>⭐ +${fmt(r.xp)} KN</span></div>
+    ${r.chests.length ? `<div class="reward-line">${Object.keys(cnt).map(k => `<span>${CHESTS[k].ic} ${CHESTS[k].n}${cnt[k] > 1 ? ' ×' + cnt[k] : ''}</span>`).join('')}</div>` : '<p class="hint" style="text-align:center">Vắng mặt từ 2 giờ trở lên sẽ nhận thêm rương.</p>'}
+    <div class="btns"><button class="btn" id="bOff1">Nhận</button><button class="btn ok" id="bOff2" ${S.gems >= 30 ? '' : 'disabled'}>Nhận x2 vàng & KN (💎30)</button></div>`, root => {
+    bindBtns(root, { '#bOff1': () => give(1), '#bOff2': () => { if (S.gems < 30) return; S.gems -= 30; give(2); } });
+  });
+}
+setInterval(markSeen, 30000); // ghi mốc thời gian đang chơi
+document.addEventListener('visibilitychange', () => { if (document.hidden) markSeen(); else checkOffline(); });
+addEventListener('pagehide', markSeen);
+setTimeout(checkOffline, 1200);
