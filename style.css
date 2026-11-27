@@ -312,3 +312,15 @@ html,body,#app{overflow-x:hidden}
 .sell-rar.on{border-color:var(--rc);background:linear-gradient(#ffffff14,#0000)}
 .sell-rar.on i{background:var(--rc)}
 .sell-rar b{font-size:13px}.sell-rar small{font-size:10.5px;color:var(--mute)}
+
+/* Cường hóa & ép sao */
+.forge-list{display:flex;flex-direction:column;gap:6px;max-height:58vh;overflow-y:auto;margin:6px 0}
+.forge-row{display:flex;gap:8px;align-items:center;background:var(--panel2);border-radius:10px;padding:6px;border-left:4px solid}
+.forge-row .icon{width:44px;height:44px;flex:0 0 44px;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.forge-row .icon img{width:100%;height:100%;object-fit:contain}
+.forge-row .fi{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.forge-row .fi>b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.forge-row .fi small{font-size:10.5px;color:var(--mute)}
+.forge-row .fb{display:flex;gap:4px;flex-wrap:wrap}
+.btn.sm{padding:5px 8px;font-size:11px;min-width:0}
+.btn.star{background:linear-gradient(#ffe14a,#d48a00);color:#2a1600}
+.btn.star:disabled{opacity:.45}

@@ -625,3 +625,58 @@ function goFull() {
   if (IS_IOS) { try { if (!localStorage.getItem('hs_ios_full')) { localStorage.setItem('hs_ios_full', '1'); setTimeout(() => toast('Chơi toàn màn hình: bấm Chia sẻ ⬆ → “Thêm vào MH chính”'), 2500); } } catch (e) { } }
   addEventListener('resize', () => { try { if (B) fitBattle(); } catch (e) { } });
 })();
+
+// ================== CƯỜNG HÓA + ÉP SAO ==================
+// Ép sao chỉ cho đồ đỏ (Thần Thoại) trở lên. Lên sao thứ n cần n trang bị CÙNG PHẨM CHẤT trong túi làm nguyên liệu,
+// tỉ lệ thành công giảm dần; thất bại vẫn mất nguyên liệu, không mất sao. Mỗi sao +8% chỉ số.
+const STAR_MIN_RAR = 6, STAR_MAX = 5, STAR_BONUS = 0.08, STAR_RATE = [90, 75, 60, 45, 30];
+const starNeed = (it) => (it.star || 0) + 1;
+const starStr = (n) => n ? '★'.repeat(n) : '';
+const _itemStatsS = itemStats;
+itemStats = function (it) { const s = _itemStatsS(it); if (it && it.star) { const k = 1 + STAR_BONUS * it.star; s.atk = Math.round(s.atk * k); s.hp = Math.round(s.hp * k); } return s; };
+const _itemNameS = itemName;
+itemName = function (it) { const n = _itemNameS(it); return it && it.star ? `${n} ${starStr(it.star)}` : n; };
+function starMats(it) { return S.bag.filter(q => q !== it && q.rar === it.rar && !(q.star > 0)).sort((a, b) => a.ilvl - b.ilvl || a.up - b.up); }
+function tryStar(it, done) {
+  if (it.rar < STAR_MIN_RAR || (it.star || 0) >= STAR_MAX) return;
+  const need = starNeed(it), mats = starMats(it);
+  if (mats.length < need) return toast(`Cần ${need} đồ ${RAR[it.rar].n} trong túi`);
+  mats.slice(0, need).forEach(removeFromBag);
+  const rate = STAR_RATE[it.star || 0];
+  if (Math.random() * 100 < rate) { it.star = (it.star || 0) + 1; sfx('chest'); toast(`Ép sao thành công! ${starStr(it.star)}`); }
+  else { sfx('lose'); toast(`Ép sao thất bại (${rate}%) — mất ${need} nguyên liệu`); }
+  save(); render(); done && done();
+}
+function forgeRow(it, slotName, equipped) {
+  const cost = upCost(it), maxed = it.up >= MAX_UP[it.rar], canStar = it.rar >= STAR_MIN_RAR, st = it.star || 0;
+  const mats = canStar ? starMats(it).length : 0, need = starNeed(it);
+  return `<div class="forge-row" style="border-left-color:${RCOL[it.rar]}">
+    <div class="icon bg${it.rar} r${it.rar}">${itemIconHTML(it)}</div>
+    <div class="fi"><b class="t${it.rar}">${itemName(it)}</b><small>${slotName} · ${RAR[it.rar].n} · Cấp ${it.ilvl} · <b>+${it.up}</b>/${MAX_UP[it.rar]}${canStar ? ` · <span style="color:#ffd84a">${st}/${STAR_MAX}★</span>` : ''}</small>
+      <div class="fb"><button class="btn green sm" data-up="${it.id}" ${maxed || S.gold < cost ? 'disabled' : ''}>${maxed ? 'Tối đa' : `Cường hóa 🪙${fmt(cost)}`}</button>
+      ${canStar ? (st >= STAR_MAX ? '<button class="btn sm" disabled>★ Tối đa</button>' : `<button class="btn star sm" data-star="${it.id}" ${mats >= need ? '' : 'disabled'}>Ép sao ${st + 1}★ · ${STAR_RATE[st]}% · cần ${need} (${mats})</button>`) : ''}</div></div></div>`;
+}
+function forgeModal() {
+  ensureFeat();
+  const eq = SLOTS.map(s => [s, S.gear[s.id]]).filter(([, it]) => it);
+  const html = `<h3>⚒ Cường hóa & Ép sao</h3>
+    <p class="hint" style="text-align:center">Cường hóa: +10% chỉ số mỗi cấp (tốn vàng).<br>Ép sao: chỉ đồ <b style="color:${RCOL[STAR_MIN_RAR]}">${RAR[STAR_MIN_RAR].n}</b> trở lên · sao thứ n cần n đồ cùng phẩm chất · mỗi sao +${STAR_BONUS * 100}% chỉ số · thất bại mất nguyên liệu.</p>
+    <div class="forge-list">${eq.map(([s, it]) => forgeRow(it, s.n, true)).join('') || '<p class="hint">Chưa mặc trang bị nào</p>'}</div>
+    <div class="btns"><button class="btn" id="bC">Đóng</button></div>`;
+  modal(html, root => {
+    bindBtns(root, { '#bC': closeModal });
+    const find = (id) => Object.values(S.gear).find(q => q && q.id === id) || S.bag.find(q => q.id === id);
+    root.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const it = find(b.dataset.up), c = upCost(it); if (!it || S.gold < c || it.up >= MAX_UP[it.rar]) return; S.gold -= c; it.up++; sfx('coin'); save(); render(); forgeModal(); });
+    root.querySelectorAll('[data-star]').forEach(b => b.onclick = () => { const it = find(b.dataset.star); if (it) tryStar(it, forgeModal); });
+  });
+}
+(function hookForge() {
+  const fb = document.createElement('button'); fb.className = 'mini'; fb.id = 'btnForge'; fb.textContent = '⚒ Cường hóa'; fb.style.cssText = 'margin-left:4px;background:linear-gradient(#ffb02e,#b5560f)';
+  const ref = $('btnOutfit'); ref.parentNode.insertBefore(fb, ref); fb.onclick = () => { sfx('tap'); forgeModal(); };
+  // chi tiết từng món: thêm nút ép sao cho đồ đỏ trở lên
+  const _idS = itemDetail;
+  itemDetail = function (it, equipped) { _idS(it, equipped); if (it.rar < STAR_MIN_RAR) return; const box = document.querySelector('#modal .btns'); if (!box || box.querySelector('#bStar')) return;
+    const st = it.star || 0, need = starNeed(it), mats = starMats(it).length; const b = document.createElement('button'); b.className = 'btn star'; b.id = 'bStar';
+    b.textContent = st >= STAR_MAX ? '★ Tối đa' : `Ép sao ${st + 1}★ · ${STAR_RATE[st]}% · cần ${need} (${mats})`; b.disabled = st >= STAR_MAX || mats < need;
+    b.onclick = () => tryStar(it, () => itemDetail(it, equipped)); box.appendChild(b); };
+})();

@@ -1077,10 +1077,10 @@ function sellBulkModal() {
   const pick = new Set(S.sellRar || [0]);
   const draw = () => {
     let rows = '', tot = 0, n = 0;
-    RAR.forEach((r, k) => { const list = S.bag.filter(i => i.rar === k); if (!list.length) return; const g = list.reduce((a, i) => a + sellPrice(i), 0); const on = pick.has(k); if (on) { tot += g; n += list.length; }
+    RAR.forEach((r, k) => { const list = S.bag.filter(i => i.rar === k && !(i.star > 0)); if (!list.length) return; const g = list.reduce((a, i) => a + sellPrice(i), 0); const on = pick.has(k); if (on) { tot += g; n += list.length; }
       rows += `<button class="sell-rar ${on ? 'on' : ''}" data-k="${k}" style="--rc:${RCOL[k]}"><i>${on ? '✓' : ''}</i><b class="t${k}">${r.n}</b><small>${list.length} món · 🪙${fmt(g)}</small></button>`; });
-    const high = [...pick].some(k => k >= 4 && S.bag.some(i => i.rar === k));
-    return { html: `<h3>💰 Bán hàng loạt</h3><p class="hint" style="text-align:center">Chọn phẩm chất muốn bán. Đồ đang mặc không bị bán.</p>
+    const high = [...pick].some(k => k >= 4 && S.bag.some(i => i.rar === k && !(i.star > 0)));
+    return { html: `<h3>💰 Bán hàng loạt</h3><p class="hint" style="text-align:center">Chọn phẩm chất muốn bán. Đồ đang mặc và đồ đã ép sao không bị bán.</p>
       <div class="sell-grid">${rows || '<p class="hint">Túi đồ trống</p>'}</div>
       <p style="text-align:center;font-weight:800;margin:8px 0">Bán ${n} món · +🪙${fmt(tot)}</p>
       ${high ? '<p class="hint" style="color:#ff9a7a;text-align:center">Có đồ Huyền Thoại trở lên — bấm Bán 2 lần để xác nhận.</p>' : ''}
@@ -1090,7 +1090,7 @@ function sellBulkModal() {
     root.querySelectorAll('.sell-rar').forEach(el => el.onclick = () => { const k = +el.dataset.k; pick.has(k) ? pick.delete(k) : pick.add(k); S.sellRar = [...pick]; save(); sfx('tap'); open(); });
     bindBtns(root, { '#bC': closeModal, '#bSell': () => { const bt = root.querySelector('#bSell');
       if (d.high && !bt.dataset.ok) { bt.dataset.ok = 1; bt.textContent = 'Bấm lần nữa để bán'; return; }
-      const list = S.bag.filter(i => pick.has(i.rar)); if (!list.length) return;
+      const list = S.bag.filter(i => pick.has(i.rar) && !(i.star > 0)); if (!list.length) return;
       let g = 0; list.forEach(i => { g += sellPrice(i); removeFromBag(i); }); S.gold += g; sfx('coin'); save(); render(); closeModal(); toast(`Đã bán ${list.length} món, +🪙${fmt(g)}`); } });
   }); };
   open();
