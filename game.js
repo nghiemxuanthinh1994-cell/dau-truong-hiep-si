@@ -163,12 +163,11 @@ const SKILL_2 = { hoa: 'whirl', bang: 'guard', loi: 'whirl', doc: 'leech', tho: 
 ].forEach(([id, n, e, ps, boss], i) => MONSTERS.push({ id, n, e, ps, boss: !!boss, sk: [[SKILL_OF[e], boss ? 20 : 14 + (i % 4) * 2], [SKILL_2[e], boss ? 12 : 7]] }));
 // Hướng vẽ sẵn: các ảnh có mặt quay TRÁI (soát 2026-11-27 bằng cách so cặp ảnh gốc/ảnh lật) -> giữ nguyên; còn lại lật để luôn nhìn về nhân vật
 const NATIVE_LEFT = new Set([
-  'bo-xuong', 'bong-ma-ky-si', 'coc-doc', 'cua-hiep-si', 'cuop-bien-troi', 'dau-si-gau',
-  'dieu-nhan-gio', 'goblin-cuop', 'khong-lo-mot-mat', 'ky-si-canh-cut', 'ky-si-co-khi', 'lanh-chua',
-  'linh-gac', 'long-ky-si', 'long-nhan-bang', 'ma-ca-rong', 'ma-vuong', 'nam-khong-lo',
-  'nguoi-bach-tuoc', 'nguoi-bo-cap', 'nguoi-cay', 'nguoi-lun-bang', 'nguoi-soi', 'nhen-yeu-tinh',
-  'nu-hiep-si', 'nu-hoang-naga', 'pharaoh', 'phu-thuy-bang', 'quy-dung-nham', 'quy-sam',
-  'rua-da', 'tien-day-leo', 'vua-slime', 'vua-tu-linh'
+  'bo-xuong', 'bong-ma-ky-si', 'coc-doc', 'cua-hiep-si', 'dau-si-gau', 'goblin-cuop',
+  'ky-si-co-khi', 'lanh-chua', 'linh-gac', 'long-ky-si', 'long-nhan-bang', 'ma-vuong',
+  'nguoi-cay', 'nguoi-soi', 'nhen-yeu-tinh', 'nu-hiep-si', 'nu-hoang-naga',
+  'pharaoh', 'quy-dung-nham', 'quy-sam', 'rua-da', 'tien-day-leo', 'vua-slime',
+  'vua-tu-linh'
 ]);
 MONSTERS.forEach(m => { m.faceL = NATIVE_LEFT.has(m.id); });
 // Chỉ dùng quái đã có ảnh nạp xong
