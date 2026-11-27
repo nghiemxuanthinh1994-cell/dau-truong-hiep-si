@@ -304,3 +304,11 @@ img, canvas { -webkit-user-drag: none; }
 #scr-home .modes .mode.play .ic .ic-img{width:34px;height:34px}
 #scr-home .modes .mode.play b{font-size:20px}
 html,body,#app{overflow-x:hidden}
+
+/* Bán hàng loạt theo phẩm chất */
+.sell-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.sell-rar{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:7px 8px 7px 30px;border-radius:10px;background:var(--panel2);border:2px solid #0000;position:relative;text-align:left}
+.sell-rar i{position:absolute;left:7px;top:50%;transform:translateY(-50%);width:17px;height:17px;border-radius:5px;border:2px solid var(--rc);font-style:normal;font-size:12px;line-height:13px;text-align:center;color:#fff}
+.sell-rar.on{border-color:var(--rc);background:linear-gradient(#ffffff14,#0000)}
+.sell-rar.on i{background:var(--rc)}
+.sell-rar b{font-size:13px}.sell-rar small{font-size:10.5px;color:var(--mute)}
