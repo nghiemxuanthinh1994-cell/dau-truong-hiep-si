@@ -631,6 +631,9 @@ function drawPaper(ctx, x, y, sc, L, facing, pose) {
 // ===== Hiệu ứng quái theo HẠNG (thường / tinh anh / trùm / trùm thế giới) và HỆ =====
 // Thường: không hiệu ứng. Tinh anh: viền tím + ít hạt hệ. Trùm: viền cam đỏ + vòng chân. Trùm thế giới: vàng, mạnh nhất.
 const RANK_COL = [null, '#b45cff', '#ff5a2a', '#ffd700'];
+const MON_SZ = [1, 1.1, 1.22, 1.38]; // thường / tinh anh / trùm / trùm thế giới (siêu cấp)
+// độ mạnh phát sáng: theo hạng + cấp quái (cấp trang bị trung bình của quái), 0 → ~2
+function monPw(L, f) { if (!L.monster) return L; let s = 0, n = 0; for (const k in (f.gear || {})) if (f.gear[k]) { s += f.gear[k].ilvl; n++; } L.lv = n ? s / n : 1; L.pw = (L.rank || 0) * 0.4 + Math.max(0, Math.min(1, (L.lv - 8) / 50)) * 0.8; return L; }
 function imgSil(im, col) { // hình bóng tô màu có lề + làm mờ (dùng chung cho quái)
   im.__msil = im.__msil || {}; if (im.__msil[col]) return im.__msil[col];
   const W = im.naturalWidth, H = im.naturalHeight, P = Math.round(H * 0.05), c = document.createElement('canvas'); c.width = W + P * 2; c.height = H + P * 2; const x = c.getContext('2d');
@@ -639,16 +642,16 @@ function imgSil(im, col) { // hình bóng tô màu có lề + làm mờ (dùng c
 }
 function monsterSilGlow(ctx, im, L, W, H, t) {
   const rk = L.rank, ec = ELEM[L.elem] ? ELEM[L.elem].c : '#fff', S2 = imgSil(im, rk >= 2 ? RANK_COL[rk] : ec), pw = S2.p * H;
-  ctx.save(); ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.35 + rk * 0.15) * (0.75 + 0.25 * Math.sin(t * 3));
+  const pwr = L.pw != null ? L.pw : rk * 0.4; ctx.save(); ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(0.95, 0.2 + pwr * 0.48) * (0.75 + 0.25 * Math.sin(t * 3)); // càng mạnh càng sáng
   ctx.drawImage(S2.c, -W / 2 - pw, -H - pw, W + pw * 2, H + pw * 2);
-  if (rk >= 2) { const S3 = imgSil(im, ec); ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 2.2 + 1); ctx.drawImage(S3.c, -W / 2 - pw * 0.6, -H - pw * 0.6, W + pw * 1.2, H + pw * 1.2); }
+  if (rk >= 2 || pwr >= 1) { const S3 = imgSil(im, ec); ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 2.2 + 1); ctx.drawImage(S3.c, -W / 2 - pw * 0.6, -H - pw * 0.6, W + pw * 1.2, H + pw * 1.2); }
   ctx.restore();
 }
 function monsterFxBack(ctx, L, W, H, sc, t) {
-  const rk = L.rank; if (!rk) return; const col = RANK_COL[rk], ec = ELEM[L.elem] ? ELEM[L.elem].c : '#fff';
+  const rk = L.rank, pw = L.pw != null ? L.pw : rk * 0.4; if (!rk && pw < 0.35) return; const col = RANK_COL[rk] || (ELEM[L.elem] ? ELEM[L.elem].c : '#fff'), ec = ELEM[L.elem] ? ELEM[L.elem].c : '#fff';
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   const g = ctx.createRadialGradient(0, 0, 4, 0, 0, W * 0.6); g.addColorStop(0, ec); g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.globalAlpha = 0.25 + rk * 0.12 + Math.sin(t * 3) * 0.08; ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, W * 0.6, 15 * sc, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = Math.min(0.75, 0.1 + pw * 0.3) + Math.sin(t * 3) * 0.08; ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, W * 0.6, 15 * sc, 0, 0, Math.PI * 2); ctx.fill();
   if (rk >= 2) { // vòng chân nhấp nháy theo màu hạng; trùm thế giới thêm vòng thứ hai xoay
     ctx.globalAlpha = 0.45 + Math.sin(t * 5) * 0.2; ctx.strokeStyle = col; ctx.lineWidth = 2.5 * sc; ctx.shadowColor = col; ctx.shadowBlur = 14;
     ctx.beginPath(); ctx.ellipse(0, 0, W * 0.5, 12 * sc, 0, 0, Math.PI * 2); ctx.stroke();
@@ -658,7 +661,7 @@ function monsterFxBack(ctx, L, W, H, sc, t) {
 }
 // Hạt theo hệ, bay quanh thân quái
 function monsterFxFront(ctx, L, W, H, sc, t) {
-  const rk = L.rank, e = L.elem, ec = ELEM[e] ? ELEM[e].c : '#fff', n = [0, 7, 13, 20][rk];
+  const rk = L.rank, e = L.elem, ec = ELEM[e] ? ELEM[e].c : '#fff', n = Math.round([0, 7, 13, 20][rk] + (L.pw || 0) * 5);
   ctx.save(); ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < n; i++) {
     const seed = i * 12.9898, k = (t * (0.25 + (i % 5) * 0.04) + i / n) % 1, sx = Math.sin(seed) * W * 0.45 + Math.sin(t * 1.3 + i) * 6 * sc;
@@ -732,8 +735,10 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   if (!im || !im.complete || !im.naturalWidth) return drawKnight(ctx, x, y, sc, L, facing, pose);
   pose = pose || {};
   const t = pose.t != null ? pose.t : performance.now() / 1000;
-  let H = 150 * sc * (L.boss ? 1.2 : 1) * (L.monster ? 1.05 : 1) * (L.super ? 1.12 : 1) * (L.giant ? 1.25 : 1), W = H * im.naturalWidth / im.naturalHeight;
-  if (pose.maxW && W > pose.maxW * (L.giant ? 1.45 : 1)) { const mw = pose.maxW * (L.giant ? 1.45 : 1); H *= mw / W; W = mw; } // con quá bè thì thu lại cho vừa khung
+  let H = L.monster ? 150 * sc * 1.05 * MON_SZ[L.rank || 0] * (L.super ? 1.12 : 1) // quái cùng hạng cao bằng nhau; tinh anh/trùm/siêu cấp to hơn
+    : 150 * sc * (L.boss ? 1.2 : 1) * (L.super ? 1.12 : 1) * (L.giant ? 1.25 : 1), W = H * im.naturalWidth / im.naturalHeight;
+  const mwCap = L.monster ? Math.max(pose.maxW || 0, H * 1.3) : pose.maxW * (L.giant ? 1.45 : 1);
+  if (pose.maxW && W > mwCap) { H *= mwCap / W; W = mwCap; } // chỉ con quá bè (rộng > 1,3× cao) mới thu lại
   if (pose.fitW > 0 && W > pose.fitW) { H *= pose.fitW / W; W = pose.fitW; } // không tràn mép màn hình
   if (pose.fitH > 0 && H > pose.fitH) { W *= pose.fitH / H; H = pose.fitH; } // không chạm thanh máu phía trên
   const dead = pose.dead || 0;
@@ -782,9 +787,9 @@ function drawFighter(ctx, x, y, sc, L, facing, pose) {
   if (!pose.still) ctx.transform(1, 0, Math.sin(t * 1.6 + x * 0.03) * (L.boss ? 0.026 : 0.02), 1, 0, 0); // đung đưa cả khối, chân đứng yên
   if (glow && !B) { ctx.shadowColor = glow; ctx.shadowBlur = L.boss ? 12 : Math.min(10, 4 + (L.tier || 2) * 1.5); }
   const wid = useLayer ? bodyId : L.spr;
-  if (L.monster && L.rank >= 1 && dead < 1) monsterSilGlow(ctx, im, L, W, H, t);
+  if (L.monster && (L.rank >= 1 || (L.pw || 0) >= 0.15) && dead < 1) monsterSilGlow(ctx, im, L, W, H, t);
   ctx.drawImage(im, -W / 2, -H, W, H);
-  if (L.monster && L.rank >= 1 && dead < 1 && !(S && S.noFx)) monsterFxFront(ctx, L, W, H, sc, t);
+  if (L.monster && (L.rank >= 1 || (L.pw || 0) >= 0.3) && dead < 1 && !(S && S.noFx)) monsterFxFront(ctx, L, W, H, sc, t);
   ctx.shadowBlur = 0;
   if (pose.flash > 0 && SPR_WHITE[wid]) { ctx.globalAlpha = pose.flash * 0.75; ctx.drawImage(SPR_WHITE[wid], -W / 2, -H, W, H); ctx.globalAlpha = 1 - dead * 0.35; }
   const A = anchorOf(bodyId);
@@ -1217,7 +1222,7 @@ function mkFighter(f, side, hpStart) {
   else for (const s of SLOTS) { const it = f.gear[s.id]; if (hasPerk(it)) perks.push({ k: it.perk, ch: perkChance(it) }); }
   const st = f.stats;
   return {
-    name: f.name, side, look: lookOf(f), elem: elemOf(f), passive: f.mon ? f.mon.ps : null, revived: false, swoosh: 0, swC: '#fff', maxHp: st.hp, hp: hpStart != null ? Math.min(hpStart, st.hp) : st.hp,
+    name: f.name, side, look: monPw(lookOf(f), f), elem: elemOf(f), passive: f.mon ? f.mon.ps : null, revived: false, swoosh: 0, swC: '#fff', maxHp: st.hp, hp: hpStart != null ? Math.min(hpStart, st.hp) : st.hp,
     atk: st.atk, block: st.block, crit: st.crit || 10, interval: 1000 / (1 + (st.speed || 0) / 100), perks,
     x: side < 0 ? -60 : 420, homeX: side < 0 ? 80 : 280, next: side < 0 ? 0 : 120,
     burn: 0, poison: 0, guard: false, stun: false, swing: 0, arm: 0.6, flash: 0, dead: 0, lunge: 0, walk: 0, shownHp: 0,
@@ -1389,13 +1394,13 @@ function tryRevive(f, vis) {
 }
 // Vệt chém phát sáng theo màu chiêu/hệ
 function drawSwoosh(ctx, f, dx, ground) {
-  const dir = f.side < 0 ? 1 : -1, cx = f.x + dx + dir * 40, cy = ground - 110;
+  const dir = f.side < 0 ? 1 : -1, cx = f.x + dx + dir * 30, cy = ground - 95; // vệt chém thu nhỏ
   const c = f.swC || ELEM[f.elem || 'vo'].c;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = f.swoosh * 0.9;
-  ctx.shadowColor = c; ctx.shadowBlur = 24; ctx.strokeStyle = c; ctx.lineCap = 'round';
+  ctx.shadowBlur = 0; ctx.strokeStyle = c; ctx.lineCap = 'round';
   for (let i = 0; i < 3; i++) {
-    ctx.lineWidth = 14 - i * 5; ctx.globalAlpha = f.swoosh * (0.35 + i * 0.3);
-    ctx.beginPath(); ctx.arc(cx, cy, 70 - i * 4, dir > 0 ? -1.9 : Math.PI - 1.2, dir > 0 ? 1.2 : Math.PI + 1.9, false); ctx.stroke();
+    ctx.lineWidth = 8 - i * 3; ctx.globalAlpha = f.swoosh * (0.3 + i * 0.28);
+    ctx.beginPath(); ctx.arc(cx, cy, 46 - i * 3, dir > 0 ? -1.9 : Math.PI - 1.2, dir > 0 ? 1.2 : Math.PI + 1.9, false); ctx.stroke();
   }
   ctx.restore();
 }
