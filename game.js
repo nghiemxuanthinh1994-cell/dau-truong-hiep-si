@@ -1456,7 +1456,7 @@ function drawBattle(now) {
     const fsc = 1.0 * Math.pow(BH / 640, 0.7); // máy càng dài, nhân vật càng to (nhỏ lại ~10% theo yêu cầu)
     const hx = f.side < 0 ? 80 : 280, fitW = 2 * Math.min(hx, 360 - hx) + 36, fitH = ground + Math.round((BH - 640) * 0.62) - 130;
     drawFighter(ctx, f.x + dx, ground, fsc, f.look, dir, { key: 'b' + f.side, t: now / 1000, arm: f.arm, dead: f.dead, walk: f.walk || (f.lunge > 0 ? Math.min(1, f.lunge) * Math.PI : 0), flash: f.flash, maxW: 170, fitW, fitH }); // lao tới = bước nhún lên khỏi mặt đất
-    // (vệt sáng đường vung vũ khí đã bỏ theo yêu cầu)
+    if (f.swoosh > 0 && f.look && f.look.monster) drawSwoosh(ctx, f, dx, ground); // chỉ quái có vệt chém (ảnh tĩnh, cần thấy lượt quái đánh); nhân vật đã có động tác vung vũ khí
     if (!f.dead) drawStatusFx(ctx, f, f.x + dx, ground, fsc, now / 1000);
   }
   // hạt hiệu ứng (toạ độ y gốc 360 -> lệch lên ground)
