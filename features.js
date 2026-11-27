@@ -235,7 +235,8 @@ const WORLD_BOSSES = [
   { id: 'wb-3', alt: 'long-nhan-bang', n: 'Băng Hậu Kraken', e: 'bang', sk: [['ice', 22], ['whirl', 12]], ps: 'regen', zone: 'bang' },
 ];
 for (const b of WORLD_BOSSES) if (!SPR[b.id]) { const im = new Image(); im.src = `${b.id}.webp`; SPR[b.id] = im; }
-function bossMon(b) { const useAi = ready(b.id), base = MONSTERS.find(m => m.id === b.alt) || {}; return { id: useAi ? b.id : b.alt, n: b.n, e: b.e, sk: b.sk, ps: b.ps, boss: true, giant: true, faceL: useAi ? true : !!base.faceL }; }
+const WB_FACE_R = new Set(['wb-2', 'wb-3']); // ảnh trùm thế giới quay phải -> lật cho nhìn về nhân vật
+function bossMon(b) { const useAi = ready(b.id), base = MONSTERS.find(m => m.id === b.alt) || {}; return { id: useAi ? b.id : b.alt, n: b.n, e: b.e, sk: b.sk, ps: b.ps, boss: true, giant: true, faceL: useAi ? !WB_FACE_R.has(b.id) : !!base.faceL }; }
 const dayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 // Boss Hẹn Giờ: mở mỗi 3 giờ (0h, 3h, …, 21h), mỗi lần 30 phút, 3 lượt đánh
 const TB_EVERY = 3, TB_LEN = 30;
