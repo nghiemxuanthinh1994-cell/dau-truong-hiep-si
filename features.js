@@ -464,12 +464,14 @@ function settingsModal() {
     <div class="btns" style="margin-top:4px"><button class="btn green" id="sRedeem">Nhận quà</button></div>
     <div class="set-row"><span>Âm thanh</span><button class="toggle ${S.muted ? '' : 'on'}" id="sSound"><i></i><b>${S.muted ? 'Tắt' : 'Bật'}</b></button></div>
     <div class="set-row"><span>Hiệu ứng động<br><small style="color:#a89cc8">pháo giấy, cờ bay, hạt, tia sét trang trí</small></span><button class="toggle ${S.noFx ? '' : 'on'}" id="sFx"><i></i><b>${S.noFx ? 'Tắt' : 'Bật'}</b></button></div>
+    <div class="set-row"><span>Toàn màn hình<br><small style="color:#a89cc8">${IS_IOS ? 'iPhone: bấm Chia sẻ ⬆ → “Thêm vào MH chính”, mở game từ biểu tượng' : 'ẩn thanh địa chỉ và thanh dưới của trình duyệt'}</small></span><button class="btn" id="sFull" ${IS_IOS && !IS_STANDALONE ? 'disabled' : ''}>${isFull() ? 'Thoát' : 'Bật'}</button></div>
     <div class="set-row"><span>Dữ liệu</span><button class="btn red" id="sReset">Xóa dữ liệu & chơi lại</button></div>
     <p class="hint" id="sResetHint" style="display:none;color:#ff8a7a">Toàn bộ trang bị, thú linh, cấp độ sẽ mất và không khôi phục được. Bấm lần nữa để xác nhận.</p>
     <p class="copyright">Đấu Trường Hiệp Sĩ · phiên bản 2026<br>© 2026 Nghiêm Xuân Thịnh. Bản quyền thuộc về Nghiêm Xuân Thịnh.</p>
     <div class="btns"><button class="btn" id="sClose">Đóng</button></div>`, root => {
     bindBtns(root, {
       '#sClose': closeModal,
+      '#sFull': () => { if (isFull()) { (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document); } else goFull(); setTimeout(settingsModal, 400); },
       '#sRedeem': () => { const code = root.querySelector('#sCode').value.trim().toUpperCase().replace(/\s+/g, ''); redeemCode(code); },
       '#sSaveName': () => { S.name = (root.querySelector('#sName').value.trim() || 'Hiệp Sĩ').slice(0, 14); save(); render(); toast('Đã đổi tên: ' + S.name); },
       '#sFx': () => { S.noFx = !S.noFx; save(); sfx('tap'); toast(S.noFx ? 'Đã tắt hiệu ứng động' : 'Đã bật hiệu ứng động'); settingsModal(); },
@@ -591,4 +593,34 @@ function wingModal() {
   const _rs2 = renderShop; renderShop = function () { _rs2(); const shop = $('shop'); if (!shop || shop.querySelector('#bWingShop')) return; const d = document.createElement('div'); d.className = 'chest';
     d.innerHTML = `<span class="big">🪽</span><b>Hộp Cánh</b><small>Ra cánh 6 bộ (có Thiên Thần) · Thần Thoại 2% · cần cấp ${WING_UNLOCK_LV}</small><button id="bWingShop" ${S.gems >= 150 && (S.lv || 1) >= WING_UNLOCK_LV ? '' : 'disabled'}>💎150</button>`;
     shop.appendChild(d); d.querySelector('button').onclick = () => openWingBox(false); };
+})();
+
+// ===== Chặn zoom (chụm 2 ngón trên iPhone, chạm đúp) và menu giữ lâu =====
+(function noZoomNoCopy() {
+  const isField = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  // chạm đúp: đã chặn bằng CSS touch-action: manipulation (không chặn bằng JS để không mất cú chạm nhanh)
+  document.addEventListener('contextmenu', e => { if (!isField(e.target)) e.preventDefault(); });
+  document.addEventListener('selectstart', e => { if (!isField(e.target)) e.preventDefault(); });
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+})();
+
+// ===== Toàn màn hình khi chơi trên trình duyệt điện thoại =====
+// Android/Chrome: tự vào toàn màn hình ở lần chạm đầu. iPhone/Safari không cho trang web tự ẩn thanh trình duyệt → hướng dẫn "Thêm vào MH chính".
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) || navigator.standalone === true;
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement) || IS_STANDALONE; }
+function goFull() {
+  const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!rq || isFull()) return;
+  try { const pr = rq.call(el, { navigationUI: 'hide' }); if (pr && pr.then) pr.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {}); } catch (e) { } }).catch(() => {}); } catch (e) { }
+}
+(function autoFull() {
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (!isMobile || IS_STANDALONE) return;
+  const once = () => { if (!isFull()) goFull(); };
+  document.addEventListener('pointerup', once, { passive: true }); // mỗi lần chạm nếu bị thoát (vuốt) thì vào lại
+  if (IS_IOS) { try { if (!localStorage.getItem('hs_ios_full')) { localStorage.setItem('hs_ios_full', '1'); setTimeout(() => toast('Chơi toàn màn hình: bấm Chia sẻ ⬆ → “Thêm vào MH chính”'), 2500); } } catch (e) { } }
+  addEventListener('resize', () => { try { if (B) fitBattle(); } catch (e) { } });
 })();

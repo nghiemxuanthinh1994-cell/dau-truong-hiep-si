@@ -99,10 +99,10 @@ openChest = function (type, ilvl) {
       let g = x.createRadialGradient(160, 230, 10, 160, 230, 170); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
       x.globalAlpha = 0.25 * hint + (ot >= 0 ? 0.25 : 0); x.fillStyle = g; x.fillRect(0, 0, CW, CH);
       // tia sáng xoay (từ Sử Thi trở lên, hoặc sau khi mở)
-      if (ot >= 0 || R >= 3) { const rays = 10 + R * 2, a0 = t * (0.4 + R * 0.05), len = ot >= 0 ? 190 : 120 * hint;
+      if (ot >= 0 || R >= 3) { const rays = 6 + R, a0 = t * (0.18 + R * 0.02), len = ot >= 0 ? 170 : 110 * hint;
         const rg = x.createRadialGradient(160, 220, 0, 160, 220, Math.max(1, len)); rg.addColorStop(0, col); rg.addColorStop(0.55, col + '66'); rg.addColorStop(1, 'rgba(0,0,0,0)');
-        x.globalAlpha = (ot >= 0 ? 0.22 : 0.08 * hint); x.fillStyle = rg;
-        for (let i = 0; i < rays; i++) { const a = a0 + i * Math.PI * 2 / rays, wd = 0.05 + (i % 2) * 0.03; x.beginPath(); x.moveTo(160, 220); x.lineTo(160 + Math.cos(a - wd) * len, 220 + Math.sin(a - wd) * len); x.lineTo(160 + Math.cos(a + wd) * len, 220 + Math.sin(a + wd) * len); x.fill(); } }
+        x.globalAlpha = (ot >= 0 ? 0.12 * Math.max(0.35, 1 - ot / 2) : 0.05 * hint); x.fillStyle = rg; x.filter = 'blur(3px)';
+        for (let i = 0; i < rays; i++) { const a = a0 + i * Math.PI * 2 / rays, wd = 0.05 + (i % 2) * 0.03; x.beginPath(); x.moveTo(160, 220); x.lineTo(160 + Math.cos(a - wd) * len, 220 + Math.sin(a - wd) * len); x.lineTo(160 + Math.cos(a + wd) * len, 220 + Math.sin(a + wd) * len); x.fill(); } x.filter = 'none'; }
       x.restore();
       // rương: rung mạnh dần trước khi mở
       const shake = ot < 0 ? Math.sin(t * 40) * Math.min(1, t / 1.4) * (2 + R * 0.6) : 0;
@@ -115,10 +115,11 @@ openChest = function (type, ilvl) {
         if (ot < 0.25) { x.fillStyle = `rgba(255,255,255,${(1 - ot / 0.25) * 0.8})`; x.fillRect(0, 0, CW, CH); }
         // cột sáng
         x.save(); x.globalCompositeOperation = 'lighter';
-        const bh = Math.min(1, ot / 0.4) * 300, bw = 40 + R * 8 + Math.sin(ot * 8) * 4;
-        g = x.createLinearGradient(0, 250 - bh, 0, 250); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.4, col); g.addColorStop(1, '#ffffff');
-        x.globalAlpha = 0.55; x.fillStyle = g; x.fillRect(160 - bw / 2, 250 - bh, bw, bh);
-        x.globalAlpha = 0.9; x.fillRect(160 - bw / 6, 250 - bh, bw / 3, bh);
+        // quầng sáng dọc mềm (thay cột sáng chữ nhật cạnh cứng), mờ dần sau khi mở
+        const bh = (0.4 + Math.min(1, ot / 0.35) * 0.6) * 280, bw = 70 + R * 10, fade = Math.min(1, ot / 0.12) * Math.max(0, 1 - Math.max(0, ot - 0.35) / 1.4);
+        if (fade > 0) { x.save(); x.translate(160, 250 - bh * 0.42); x.scale(bw / 200, bh / 200);
+          g = x.createRadialGradient(0, 0, 0, 0, 0, 100); g.addColorStop(0, '#ffffff'); g.addColorStop(0.25, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+          x.globalAlpha = 0.5 * fade; x.fillStyle = g; x.beginPath(); x.arc(0, 0, 100, 0, Math.PI * 2); x.fill(); x.restore(); }
         // vòng sóng xung kích
         for (let k = 0; k < (R >= 5 ? 3 : 1); k++) { const rt = Math.max(0, ot - k * 0.18), rad = rt * 260; if (rt > 0 && rt < 0.9) { x.globalAlpha = (1 - rt / 0.9) * 0.8; x.strokeStyle = col; x.lineWidth = 4; x.beginPath(); x.ellipse(160, 250, rad, rad * 0.35, 0, 0, Math.PI * 2); x.stroke(); } }
         // hạt

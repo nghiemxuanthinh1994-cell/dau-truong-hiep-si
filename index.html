@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hiệp Sĩ">
-<link rel="stylesheet" href="style.css?v=72">
+<link rel="stylesheet" href="style.css?v=75">
 </head>
 <body>
 <div id="app">
@@ -28,9 +28,9 @@
       <canvas id="heroCanvas" width="360" height="330"></canvas>
       <div class="modes">
         <button class="mode" id="btnDungeon"><span class="ic">🏰</span><b>Hầm Ngục</b><small id="dungeonInfo"></small></button>
-        <button class="mode" id="btnCampaign"><span class="ic">🗺</span><b>Chiến Dịch</b><small id="campaignInfo"></small></button>
+        <button class="mode" id="btnRanked"><span class="ic">⚔</span><b>Đấu Hạng</b><small id="rankedInfo"></small></button>
         <button class="mode" id="btnChamp"><span class="ic">🏆</span><b>Giải Vô Địch</b><small id="champInfo"></small></button>
-        <button class="mode play" id="btnRanked"><span class="ic">⚔</span><b>ĐẤU HẠNG</b><small id="rankedInfo"></small></button>
+        <button class="mode play" id="btnCampaign"><span class="ic">🗺</span><b>CHIẾN DỊCH</b><small id="campaignInfo"></small></button>
       </div>
     </section>
 
@@ -61,7 +61,7 @@
   </main>
 
   <nav id="tabs">
-    <button data-tab="home" class="on">⚔<span>Đấu trường</span></button>
+    <button data-tab="home" class="on">🏠<span>Nhà chính</span></button>
     <button data-tab="gear">🛡<span>Trang bị</span></button>
     <button data-tab="shop">🛒<span>Cửa hàng</span></button>
     <button data-tab="rank">🏅<span>Danh vọng</span></button>
@@ -80,12 +80,12 @@
   <div id="modal" class="overlay hidden"><div class="modal-box" id="modalBox"></div></div>
   <div id="toast"></div>
 </div>
-<script src="anchors.js?v=72"></script>
-<script src="lop.js?v=72"></script>
-<script src="zones.js?v=72"></script>
-<script src="game.js?v=72"></script>
-<script src="chest.js?v=72"></script>
-<script src="features.js?v=72"></script>
+<script src="anchors.js?v=75"></script>
+<script src="lop.js?v=75"></script>
+<script src="zones.js?v=75"></script>
+<script src="game.js?v=75"></script>
+<script src="chest.js?v=75"></script>
+<script src="features.js?v=75"></script>
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');</script>
 </body>
 </html>
