@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hiệp Sĩ">
-<link rel="stylesheet" href="style.css?v=88">
+<link rel="stylesheet" href="style.css?v=89">
 </head>
 <body>
 <div id="app">
@@ -33,6 +33,9 @@
         <button class="mode play" id="btnCampaign"><span class="ic">🗺</span><b>CHIẾN DỊCH</b><small id="campaignInfo"></small></button>
       </div>
     </section>
+
+    <!-- Cường hóa: trang bị (ép sao), sau này thêm cánh, thú linh -->
+    <section id="scr-forge" class="screen"><div id="forgeBox"></div></section>
 
     <!-- Trang bị -->
     <section id="scr-gear" class="screen">
@@ -63,6 +66,7 @@
   <nav id="tabs">
     <button data-tab="home" class="on">🏠<span>Nhà chính</span></button>
     <button data-tab="gear">🛡<span>Trang bị</span></button>
+    <button data-tab="forge">⚒<span>Cường hóa</span></button>
     <button data-tab="shop">🛒<span>Cửa hàng</span></button>
     <button data-tab="rank">🏅<span>Danh vọng</span></button>
   </nav>
@@ -80,12 +84,12 @@
   <div id="modal" class="overlay hidden"><div class="modal-box" id="modalBox"></div></div>
   <div id="toast"></div>
 </div>
-<script src="anchors.js?v=88"></script>
-<script src="lop.js?v=88"></script>
-<script src="zones.js?v=88"></script>
-<script src="game.js?v=88"></script>
-<script src="chest.js?v=88"></script>
-<script src="features.js?v=88"></script>
+<script src="anchors.js?v=89"></script>
+<script src="lop.js?v=89"></script>
+<script src="zones.js?v=89"></script>
+<script src="game.js?v=89"></script>
+<script src="chest.js?v=89"></script>
+<script src="features.js?v=89"></script>
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');</script>
 </body>
 </html>

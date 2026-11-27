@@ -324,3 +324,10 @@ html,body,#app{overflow-x:hidden}
 .btn.sm{padding:5px 8px;font-size:11px;min-width:0}
 .btn.star{background:linear-gradient(#ffe14a,#d48a00);color:#2a1600}
 .btn.star:disabled{opacity:.45}
+#scr-forge .forge-list{max-height:none;overflow:visible}
+.forge-tabs{display:flex;gap:6px;margin:4px 0 8px}
+.forge-tabs button{flex:1;padding:8px 4px;border-radius:10px;background:var(--panel2);font-weight:700;font-size:13px;opacity:.7}
+.forge-tabs button.on{opacity:1;background:linear-gradient(#ffb02e,#b5560f);color:#2a1200}
+.forge-h{margin:10px 0 4px;font-size:13px;color:var(--gold)}
+.forge-soon{background:var(--panel2);border-radius:12px;padding:14px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+#tabs button span{white-space:nowrap}

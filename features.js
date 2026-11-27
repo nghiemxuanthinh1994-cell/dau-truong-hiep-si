@@ -671,8 +671,8 @@ function forgeModal() {
   });
 }
 (function hookForge() {
-  const fb = document.createElement('button'); fb.className = 'mini'; fb.id = 'btnForge'; fb.textContent = '⚒ Cường hóa'; fb.style.cssText = 'margin-left:4px;background:linear-gradient(#ffb02e,#b5560f)';
-  const ref = $('btnOutfit'); ref.parentNode.insertBefore(fb, ref); fb.onclick = () => { sfx('tap'); forgeModal(); };
+  // tab Cường hóa ở thanh dưới: vẽ màn khi mở tab
+  const _rF = render; render = function () { _rF(); if (curTab === 'forge') renderForge(); };
   // chi tiết từng món: thêm nút ép sao cho đồ đỏ trở lên
   const _idS = itemDetail;
   itemDetail = function (it, equipped) { _idS(it, equipped); if (it.rar < STAR_MIN_RAR) return; const box = document.querySelector('#modal .btns'); if (!box || box.querySelector('#bStar')) return;
@@ -680,3 +680,31 @@ function forgeModal() {
     b.textContent = st >= STAR_MAX ? '★ Tối đa' : `Ép sao ${st + 1}★ · ${STAR_RATE[st]}% · cần ${need} (${mats})`; b.disabled = st >= STAR_MAX || mats < need;
     b.onclick = () => tryStar(it, () => itemDetail(it, equipped)); box.appendChild(b); };
 })();
+
+// ===== Màn Cường hóa (tab riêng): mục Trang bị / Cánh / Thú linh =====
+let forgeSub = 'gear';
+function renderForge() {
+  const box = $('forgeBox'); if (!box) return; ensureFeat();
+  const tabs = [['gear', '🛡 Trang bị'], ['wing', '🪽 Cánh'], ['pet', '🐾 Thú linh']];
+  let body = '';
+  if (forgeSub === 'gear') {
+    const eq = SLOTS.map(s => [s, S.gear[s.id]]).filter(([, it]) => it);
+    const red = S.bag.filter(it => it.rar >= STAR_MIN_RAR).sort((a, b) => b.rar - a.rar || (b.star || 0) - (a.star || 0) || b.ilvl - a.ilvl);
+    body = `<p class="hint">Cường hóa: +10% chỉ số mỗi cấp (tốn vàng). Ép sao: đồ <b style="color:${RCOL[STAR_MIN_RAR]}">${RAR[STAR_MIN_RAR].n}</b> trở lên, tối đa ${STAR_MAX}★, sao thứ n cần n đồ cùng phẩm chất, mỗi sao +${STAR_BONUS * 100}% chỉ số, thất bại mất nguyên liệu.</p>
+      <h4 class="forge-h">Đang mặc</h4><div class="forge-list">${eq.map(([s, it]) => forgeRow(it, s.n, true)).join('') || '<p class="hint">Chưa mặc trang bị nào</p>'}</div>
+      ${red.length ? `<h4 class="forge-h">Đồ đỏ trở lên trong túi</h4><div class="forge-list">${red.map(it => forgeRow(it, SLOTS.find(s => s.id === it.slot).n, false)).join('')}</div>` : ''}`;
+  } else if (forgeSub === 'wing') {
+    const w = typeof curWing === 'function' ? curWing() : null;
+    body = `<div class="forge-soon"><b>🪽 Cường hóa Cánh</b><p>Đang mang: ${w ? `<b style="color:${PET_RCOL[w.r]}">${wingName(w)}</b>` : 'chưa có'}</p><p class="hint">Phần nâng cấp / ép sao cho cánh sẽ được thêm ở đây.</p><button class="btn" id="fWing">Mở bộ sưu tập Cánh</button></div>`;
+  } else {
+    body = `<div class="forge-soon"><b>🐾 Cường hóa Thú linh</b><p class="hint">Hiện nâng cấp thú linh bằng 💠 đá thú linh trong mục Thú Linh. Phần ép sao cho thú linh sẽ được thêm ở đây.</p><button class="btn" id="fPet">Mở Thú Linh</button></div>`;
+  }
+  box.innerHTML = `<div class="forge-tabs">${tabs.map(([k, n]) => `<button class="${forgeSub === k ? 'on' : ''}" data-fs="${k}">${n}</button>`).join('')}</div>${body}`;
+  box.querySelectorAll('[data-fs]').forEach(b => b.onclick = () => { forgeSub = b.dataset.fs; sfx('tap'); renderForge(); });
+  const find = (id) => Object.values(S.gear).find(q => q && q.id === id) || S.bag.find(q => q.id === id);
+  box.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const it = find(b.dataset.up), c = upCost(it); if (!it || S.gold < c || it.up >= MAX_UP[it.rar]) return; S.gold -= c; it.up++; sfx('coin'); save(); render(); });
+  box.querySelectorAll('[data-star]').forEach(b => b.onclick = () => { const it = find(b.dataset.star); if (it) tryStar(it); });
+  const fw = box.querySelector('#fWing'); if (fw) fw.onclick = () => { sfx('tap'); wingModal(); };
+  const fp = box.querySelector('#fPet'); if (fp) fp.onclick = () => { sfx('tap'); (typeof petModal === 'function' ? petModal : () => $('btnPet') && $('btnPet').click())(); };
+}
+forgeModal = function () { forgeSub = 'gear'; showTab('forge'); };
