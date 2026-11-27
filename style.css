@@ -294,3 +294,13 @@ input, textarea, [contenteditable] { -webkit-user-select: text; user-select: tex
 img, canvas { -webkit-user-drag: none; }
 
 @supports (height:100dvh){html,body{height:100dvh}}
+
+/* Màn chính vừa trọn 1 màn hình điện thoại: không cuộn dọc/ngang; khu nhân vật tự co theo chiều cao còn lại */
+#scr-home.active{display:flex;flex-direction:column;overflow:hidden;padding-bottom:8px}
+#scr-home > *{flex:0 0 auto}
+#scr-home #heroCanvas{flex:1 1 0;min-height:80px;height:auto;width:auto;max-width:100%;aspect-ratio:360/330;align-self:center;object-fit:contain}
+#scr-home .league-chip{margin-bottom:0}
+#scr-home .modes .mode.play{padding:8px}
+#scr-home .modes .mode.play .ic .ic-img{width:34px;height:34px}
+#scr-home .modes .mode.play b{font-size:20px}
+html,body,#app{overflow-x:hidden}
